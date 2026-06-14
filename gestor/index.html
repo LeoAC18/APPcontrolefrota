@@ -423,12 +423,15 @@
     .vistoria-row:last-child { border-bottom: none; }
     .vistoria-row:hover { background: var(--gray-50); }
     .v-left { flex: 1; min-width: 0; }
+    .v-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .v-form-badge { background: var(--primary-light); color: var(--primary); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: .3px; flex-shrink: 0; }
     .v-title { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+    .v-route { font-size: 13px; color: var(--gray-600); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
     .v-meta  { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
     .v-tags  { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .v-tag   { background: var(--danger-light); color: var(--danger); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-weight: 600; }
     .v-tag.warn { background: var(--warning-light); color: #92400e; }
-    .v-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .v-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 
     /* ══ OPERAÇÃO DRIVER CARD ══ */
     .op-card {
@@ -1230,23 +1233,41 @@ function renderVistorias(filter = currentFilter) {
   container.innerHTML = list.map(v => {
     const dt = new Date(v.datetime);
     const dateStr = dt.toLocaleDateString('pt-BR') + ' às ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-    const hasIssue = v.avarias.length > 0 || v.noises.length > 0;
-    const tags = [...v.avarias.map(a => `<span class="v-tag">${a}</span>`), ...v.noises.map(n => `<span class="v-tag warn">${n}</span>`)].join('');
+    const hasIssue = v.has_reprovado;
+    const motoristaNome = v.motorista_nome || v.motorista || '—';
+    const placa = v.placa_veiculo || v.placa || '';
+    const partida = v.local_coleta || '—';
+    const destino = v.destino || '—';
+    const formCodigo = v.form_codigo || v.form_type || '—';
+
+    const downloadBtns = v.pdfUrl
+      ? `<a class="btn btn-ghost btn-sm" href="${v.pdfUrl}" target="_blank" download="${v.pdfFilename||''}">📄 PDF</a>`
+      : v.wordUrl
+        ? `<a class="btn btn-ghost btn-sm" href="${v.wordUrl}" target="_blank" download="${v.wordFilename||''}">📝 Word</a>`
+        : '';
 
     return `
       <div class="vistoria-row">
         <div class="v-left">
-          <div class="v-title">${v.motorista} — ${v.placa || 'S/Placa'}</div>
-          <div class="v-meta">NF: ${v.nf} · ${v.destino} · ${dateStr} · KM ${v.km.toLocaleString('pt-BR')}</div>
-          ${tags ? `<div class="v-tags">${tags}</div>` : ''}
+          <div class="v-header">
+            <span class="v-form-badge">${formCodigo}</span>
+            <div class="v-title">${motoristaNome}${placa ? ' · ' + placa : ''}</div>
+          </div>
+          <div class="v-route">
+            <span>📍 ${partida}</span>
+            <span style="color:var(--gray-300)">→</span>
+            <span>🏁 ${destino}</span>
+          </div>
+          <div class="v-meta">🕐 ${dateStr}${v.processo ? ' · NF ' + v.processo : ''}</div>
         </div>
-        <div style="flex-shrink:0;text-align:right">
+        <div style="flex-shrink:0;text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
           ${v.status === 'pending'
             ? '<span class="badge warn">Aguardando aprovação</span>'
             : '<span class="badge ok">Aprovada</span>'}
-          <br/><span class="badge ${hasIssue ? 'danger' : 'gray'}" style="margin-top:4px">${hasIssue ? '⚠ Com ocorrência' : '✓ Sem avarias'}</span>
+          <span class="badge ${hasIssue ? 'danger' : 'gray'}">${hasIssue ? '⚠ Com reprovação' : '✓ Sem reprovações'}</span>
         </div>
         <div class="v-actions">
+          ${downloadBtns}
           <button class="btn btn-outline btn-sm" onclick="openVistoria(${v.id})">Ver detalhes</button>
           ${v.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="quickApprove(${v.id})">Aprovar</button>` : ''}
         </div>

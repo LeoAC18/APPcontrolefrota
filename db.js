@@ -98,9 +98,11 @@ async function initSchema() {
         status           VARCHAR(20)  DEFAULT 'pending',
         approved         BOOLEAN      DEFAULT false,
         obs_gestor       TEXT,
+        relatorio_base   VARCHAR(255),
         datetime         TIMESTAMPTZ  DEFAULT NOW(),
         created_at       TIMESTAMPTZ  DEFAULT NOW()
       );
+      ALTER TABLE vistorias ADD COLUMN IF NOT EXISTS relatorio_base VARCHAR(255);
     `);
 
     // ── Seed empresas ────────────────────────────────────────────────

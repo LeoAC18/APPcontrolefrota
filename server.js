@@ -237,17 +237,20 @@ app.get('/api/vistorias', async (_req, res) => {
     LEFT JOIN empresas ec ON ec.id = cc.empresa_id
     ORDER BY v.datetime DESC
   `);
-  // Compatibilidade com o painel gestor existente
   res.json(rows.map(r => ({
     ...r,
-    motorista: r.motorista_nome,
-    placa:     r.placa_veiculo,
-    nf:        r.processo || '—',
-    km:        0,
-    carga:     '—',
-    urgencia:  r.has_reprovado ? 'Com reprovação' : 'Sem ocorrência',
-    avarias:   r.avarias || [],
-    noises:    r.noises  || [],
+    motorista:    r.motorista_nome,
+    placa:        r.placa_veiculo,
+    nf:           r.processo || '—',
+    km:           0,
+    carga:        '—',
+    urgencia:     r.has_reprovado ? 'Com reprovação' : 'Sem ocorrência',
+    avarias:      r.avarias || [],
+    noises:       r.noises  || [],
+    wordUrl:      r.relatorio_base ? `/relatorios/${r.relatorio_base}.docx`  : null,
+    pdfUrl:       r.relatorio_base ? `/relatorios/${r.relatorio_base}.pdf`   : null,
+    wordFilename: r.relatorio_base ? `${r.relatorio_base}.docx` : null,
+    pdfFilename:  r.relatorio_base ? `${r.relatorio_base}.pdf`  : null,
   })));
 });
 
@@ -292,6 +295,11 @@ app.post('/api/vistorias', async (req, res) => {
       if (mq.rows.length) motoristaBd = mq.rows[0].id;
     }
 
+    // Gera nome do arquivo antes do INSERT para salvar no banco
+    const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
+
     const { rows } = await dbQuery(`
       INSERT INTO vistorias (
         form_type, form_codigo, processo, responsavel,
@@ -301,10 +309,10 @@ app.post('/api/vistorias', async (req, res) => {
         local_coleta, destino, num_container, tara, max_gross,
         lacre_armador, lacre_mc, lacre_exportador,
         stops, obs, data_inspecao, hora_inspecao,
-        photos_count, has_reprovado, status, datetime
+        photos_count, has_reprovado, status, datetime, relatorio_base
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
-        $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,'pending',$30
+        $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,'pending',$30,$31
       ) RETURNING *`,
       [
         d.formType, d.formCodigo, d.processo, d.responsavel,
@@ -315,6 +323,7 @@ app.post('/api/vistorias', async (req, res) => {
         d.lacreArmador, d.lacreMC, d.lacreExportador,
         JSON.stringify(d.stops || []), d.obs, d.dataInspecao, d.horaInspecao,
         d.photos || 0, d.hasReprovado || false, new Date(d.datetime || Date.now()),
+        base,
       ]
     );
 
@@ -335,9 +344,6 @@ app.post('/api/vistorias', async (req, res) => {
       });
     }
     console.log('[WORD] stops count:', stopsForReport.length, '| tipos:', stopsForReport.map(s => s.tipo));
-    const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
     const docxPath = path.join(RELAT_DIR, `${base}.docx`);
     const buffer   = await gerarWord({ ...d, stops: stopsForReport });
     fs.writeFileSync(docxPath, buffer);
