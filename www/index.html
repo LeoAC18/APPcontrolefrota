@@ -1381,11 +1381,11 @@ function validateStep() {
       const sel = document.querySelector('#motivo-grid .motivo-item.selected');
       if (!sel) { flashError('Selecione o motivo da parada'); return false; }
     }
-    const cfg = FORMS_CONFIG[state.formType];
     const stop = state.stops[si];
-    const unanswered = cfg.pontos.filter(p => !stop.items[p.id]);
+    const stopCfg = FORMS_CONFIG[stop.stopFormType || state.formType];
+    const unanswered = stopCfg.pontos.filter(p => !stop.items[p.id]);
     if (unanswered.length > 0) {
-      flashError(`Responda todos os ${cfg.pontos.length} pontos de verificação`); return false;
+      flashError(`Responda todos os ${stopCfg.pontos.length} pontos de verificação`); return false;
     }
   }
   if (step === 'final') {

@@ -352,6 +352,7 @@ app.post('/api/vistorias', async (req, res) => {
     const pdfName = pdfPath ? path.basename(pdfPath) : null;
 
     const savedId = (rows && rows.length) ? rows[0].id : null;
+    console.log(`[VISTORIA] Salva no banco: id=${savedId} motorista="${d.motorista}" tipo=${d.formType}`);
     res.json({
       ok: true,
       id: savedId,
@@ -380,7 +381,7 @@ app.patch('/api/vistorias/:id/status', async (req, res) => {
 /* ─────────────────────────────────────────
    INIT
 ───────────────────────────────────────── */
-const boot = DB_READY ? initSchema() : Promise.resolve();
+const boot = DB_READY ? initSchema().catch(err => console.error('[DB] initSchema falhou:', err.message)) : Promise.resolve();
 
 boot.then(() => {
   app.listen(PORT, () => {
