@@ -326,12 +326,19 @@ app.post('/api/vistorias', async (req, res) => {
       );
     }
 
-    // Gera Word
+    // Gera Word — o relatório usa tabela fixa de 4 paradas; preenche as faltantes com "pulada"
+    const stopsForReport = d.stops ? [...d.stops] : [];
+    while (stopsForReport.length < 4) {
+      stopsForReport.push({
+        tipo: `${stopsForReport.length}ª Parada`,
+        motivo: '', local: '', items: {}, comentarios: '', pulada: true
+      });
+    }
     const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
     const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
     const docxPath = path.join(RELAT_DIR, `${base}.docx`);
-    const buffer   = await gerarWord(d);
+    const buffer   = await gerarWord({ ...d, stops: stopsForReport });
     fs.writeFileSync(docxPath, buffer);
 
     const pdfPath = await convertPdf(docxPath);
