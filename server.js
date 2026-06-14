@@ -345,9 +345,10 @@ app.post('/api/vistorias', async (req, res) => {
     const pdfPath = await convertPdf(docxPath);
     const pdfName = pdfPath ? path.basename(pdfPath) : null;
 
+    const savedId = (rows && rows.length) ? rows[0].id : null;
     res.json({
       ok: true,
-      id: rows[0].id,
+      id: savedId,
       wordUrl:      `/relatorios/${base}.docx`,
       wordFilename: `${base}.docx`,
       pdfUrl:       pdfName ? `/relatorios/${pdfName}` : null,

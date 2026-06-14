@@ -429,10 +429,16 @@
       <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);padding:16px 18px;border-left:4px solid var(--warning)">
         <div id="active-trip-info"></div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
-          <button onclick="startNewStop()" class="btn-primary" style="font-size:15px;padding:13px">
-            ➕ Registrar Nova Parada
-          </button>
-          <button onclick="startFinal()" class="btn-secondary" style="margin-top:0;font-size:15px;padding:12px">
+          <div style="font-size:12px;color:#888;font-weight:600;letter-spacing:.5px;margin-bottom:2px">REGISTRAR NOVA PARADA</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="startNewStop('rmc045')" class="btn-primary" style="flex:1;font-size:14px;padding:12px 8px">
+              🚛 Rodoviário
+            </button>
+            <button onclick="startNewStop('rmc046')" class="btn-primary" style="flex:1;font-size:14px;padding:12px 8px;background:var(--secondary)">
+              📦 Container FCL
+            </button>
+          </div>
+          <button onclick="startFinal()" class="btn-secondary" style="margin-top:4px;font-size:15px;padding:12px">
             ✅ Finalizar Viagem
           </button>
         </div>
@@ -767,10 +773,14 @@ function startForm(type) {
 }
 
 // Abre formulário de nova parada (carrega viagem existente)
-function startNewStop() {
+function startNewStop(formType) {
   state = JSON.parse(JSON.stringify(activeTrip)); // cópia profunda
+  const stopFormType = formType || state.formType;
   const newIdx = state.stops.length;
-  state.stops.push(createStop(newIdx, state.formType));
+  const newStop = createStop(newIdx, stopFormType);
+  newStop.stopFormType = stopFormType; // preserva o tipo desta parada
+  state.stops.push(newStop);
+  state.currentStopFormType = stopFormType; // usado no renderStep
   steps = [`stop-${newIdx}`];
   stepIdx = 0;
   formMode = 'parada';
@@ -903,7 +913,11 @@ function renderStep() {
   let html = '';
   if (step === 'ident')              html = renderStepIdent();
   else if (step === 'carga')         html = renderStepCarga(cfg);
-  else if (step.startsWith('stop-')) { const si = parseInt(step.split('-')[1]); html = renderStepStop(cfg, si); }
+  else if (step.startsWith('stop-')) {
+    const si = parseInt(step.split('-')[1]);
+    const stopCfg = FORMS_CONFIG[(state.stops[si] && state.stops[si].stopFormType) || state.formType];
+    html = renderStepStop(stopCfg, si);
+  }
   else if (step === 'final')         html = renderStepFinal();
 
   body.innerHTML = html;
@@ -1238,7 +1252,7 @@ function restoreMotivo(stopIdx) {
   if (stopIdx === 0) return;
   const stop = state.stops[stopIdx];
   if (!stop.motivo) return;
-  const cfg = FORMS_CONFIG[state.formType];
+  const cfg = FORMS_CONFIG[stop.stopFormType || state.formType];
   const idx = cfg.motivos.indexOf(stop.motivo);
   if (idx < 0) return;
   const items = document.querySelectorAll('#motivo-grid .motivo-item');
@@ -1248,7 +1262,8 @@ function restoreMotivo(stopIdx) {
 function selectMotivo(stopIdx, motivoIdx, el) {
   document.querySelectorAll('#motivo-grid .motivo-item').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
-  state.stops[stopIdx].motivo = FORMS_CONFIG[state.formType].motivos[motivoIdx];
+  const _stopType = state.stops[stopIdx].stopFormType || state.formType;
+  state.stops[stopIdx].motivo = FORMS_CONFIG[_stopType].motivos[motivoIdx];
 }
 
 function setIP(btn) {
