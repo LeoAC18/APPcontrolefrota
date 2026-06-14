@@ -423,25 +423,44 @@
       </div>
     </div>
 
-    <div class="section-title">Nova Vistoria</div>
-    <div class="type-cards">
-      <div class="type-card" onclick="startForm('rmc045')">
-        <div class="type-card-icon">🚛</div>
-        <div class="type-card-info">
-          <div class="tc-code">RMC-045</div>
-          <div class="tc-title">Transporte Rodoviário</div>
-          <div class="tc-sub">21 pontos de verificação</div>
+    <!-- Card viagem em andamento — visível quando há activeTrip -->
+    <div id="active-trip-section" style="display:none; margin-bottom:20px">
+      <div class="section-title" style="color:var(--warning)">⚡ Viagem em Andamento</div>
+      <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);padding:16px 18px;border-left:4px solid var(--warning)">
+        <div id="active-trip-info"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+          <button onclick="startNewStop()" class="btn-primary" style="font-size:15px;padding:13px">
+            ➕ Registrar Nova Parada
+          </button>
+          <button onclick="startFinal()" class="btn-secondary" style="margin-top:0;font-size:15px;padding:12px">
+            ✅ Finalizar Viagem
+          </button>
         </div>
-        <div class="type-card-arrow">›</div>
       </div>
-      <div class="type-card" onclick="startForm('rmc046')">
-        <div class="type-card-icon">📦</div>
-        <div class="type-card-info">
-          <div class="tc-code">RMC-046</div>
-          <div class="tc-title">Container FCL</div>
-          <div class="tc-sub">11 pontos de verificação</div>
+    </div>
+
+    <!-- Nova Vistoria — oculto quando há viagem em andamento -->
+    <div id="nova-vistoria-section">
+      <div class="section-title">Nova Vistoria</div>
+      <div class="type-cards">
+        <div class="type-card" onclick="startForm('rmc045')">
+          <div class="type-card-icon">🚛</div>
+          <div class="type-card-info">
+            <div class="tc-code">RMC-045</div>
+            <div class="tc-title">Transporte Rodoviário</div>
+            <div class="tc-sub">21 pontos de verificação</div>
+          </div>
+          <div class="type-card-arrow">›</div>
         </div>
-        <div class="type-card-arrow">›</div>
+        <div class="type-card" onclick="startForm('rmc046')">
+          <div class="type-card-icon">📦</div>
+          <div class="type-card-info">
+            <div class="tc-code">RMC-046</div>
+            <div class="tc-title">Container FCL</div>
+            <div class="tc-sub">11 pontos de verificação</div>
+          </div>
+          <div class="type-card-arrow">›</div>
+        </div>
       </div>
     </div>
 
@@ -653,11 +672,13 @@ const FORMS_CONFIG = {
    STATE
 ═══════════════════════════════════════ */
 let state = {};
-// steps[] = array dinâmico: 'ident' | 'carga' | 'stop-N' | 'decide-N' | 'final'
-let steps = [];
+let steps = [];      // 'ident' | 'carga' | 'stop-N' | 'final'
 let stepIdx = 0;
+let formMode = 'partida'; // 'partida' | 'parada' | 'final'
 let photos = [];
 let vistorias = JSON.parse(localStorage.getItem('vistorias_mc') || '[]');
+// Viagem em andamento (salva entre sessões)
+let activeTrip = JSON.parse(localStorage.getItem('activeTrip_mc') || 'null');
 
 // Dados do banco — carregados uma vez ao abrir o app
 let dbData = { motoristas: [], veiculos: [], carretas: [] };
@@ -727,6 +748,7 @@ function goTo(screenId) {
 }
 
 function startForm(type) {
+  if (activeTrip) return; // já há viagem em andamento — home mostra as opções
   state = {
     formType: type,
     processo: '', responsavel: '', motorista: '', cpf: '',
@@ -735,13 +757,79 @@ function startForm(type) {
     lacreArmador: '', lacreMC: '', lacreExportador: '',
     stops: []
   };
-  state.stops.push(createStop(0, type)); // Partida — única obrigatória
-  // Fluxo inicial: Ident → Carga → Partida → Decisão → Final
-  steps = ['ident', 'carga', 'stop-0', 'decide-0', 'final'];
+  state.stops.push(createStop(0, type));
+  steps = ['ident', 'carga', 'stop-0'];
   stepIdx = 0;
+  formMode = 'partida';
   photos = [];
   goTo('form');
   renderStep();
+}
+
+// Abre formulário de nova parada (carrega viagem existente)
+function startNewStop() {
+  state = JSON.parse(JSON.stringify(activeTrip)); // cópia profunda
+  const newIdx = state.stops.length;
+  state.stops.push(createStop(newIdx, state.formType));
+  steps = [`stop-${newIdx}`];
+  stepIdx = 0;
+  formMode = 'parada';
+  photos = activeTrip.photoData || [];
+  goTo('form');
+  renderStep();
+}
+
+// Abre tela de finalização
+function startFinal() {
+  state = JSON.parse(JSON.stringify(activeTrip));
+  steps = ['final'];
+  stepIdx = 0;
+  formMode = 'final';
+  photos = activeTrip.photoData || [];
+  goTo('form');
+  renderStep();
+}
+
+// Salva a partida no localStorage e volta à home
+function savePartidaAndGoHome() {
+  saveCurrentStep(); // salva stop-0
+  state.stops[0].motivo = state.stops[0].motivo || FORMS_CONFIG[state.formType].motivos[0];
+  activeTrip = {
+    id: Date.now(),
+    formType: state.formType,
+    formCodigo: FORMS_CONFIG[state.formType].codigo,
+    processo: state.processo,
+    responsavel: state.responsavel,
+    motorista: state.motorista,
+    cpf: state.cpf,
+    _motoristaId: state._motoristaId,
+    _veiculoId: state._veiculoId,
+    _carretaId: state._carretaId,
+    placaVeiculo: state.placaVeiculo,
+    placaCarreta: state.placaCarreta,
+    localColeta: state.localColeta,
+    destino: state.destino,
+    numContainer: state.numContainer,
+    tara: state.tara, maxGross: state.maxGross,
+    lacreArmador: state.lacreArmador,
+    lacreMC: state.lacreMC,
+    lacreExportador: state.lacreExportador,
+    stops: state.stops,
+    photoData: photos,
+    startedAt: new Date().toISOString()
+  };
+  localStorage.setItem('activeTrip_mc', JSON.stringify(activeTrip));
+  goTo('home');
+}
+
+// Salva uma nova parada na viagem ativa e volta à home
+function saveParadaAndGoHome() {
+  const si = parseInt(steps[stepIdx].split('-')[1]);
+  saveStop(si);
+  activeTrip.stops = state.stops;
+  activeTrip.photoData = photos;
+  localStorage.setItem('activeTrip_mc', JSON.stringify(activeTrip));
+  goTo('home');
 }
 
 function createStop(idx, type) {
@@ -765,30 +853,24 @@ function renderStep() {
   const step = steps[stepIdx];
   const cfg = FORMS_CONFIG[state.formType];
   const body = document.getElementById('form-body');
-  const isDecide = step.startsWith('decide-');
 
   // ── Header ──
   document.getElementById('form-title').textContent = cfg.titulo;
   document.getElementById('form-subtitle').textContent = cfg.codigo;
 
-  const visibleSteps = steps.filter(s => !s.startsWith('decide-'));
-  const currentVisibleIdx = isDecide
-    ? visibleSteps.indexOf('stop-' + step.split('-')[1])
-    : visibleSteps.indexOf(step);
-
+  const currentVisibleIdx = steps.indexOf(step);
   let stepLabel = '';
   if (step === 'ident')      stepLabel = 'Etapa 1 · Identificação';
   else if (step === 'carga') stepLabel = 'Etapa 2 · Carga e Lacres';
   else if (step.startsWith('stop-')) {
     const si = parseInt(step.split('-')[1]);
-    stepLabel = `Etapa ${3 + si} · ${si === 0 ? 'Partida' : si + 'ª Parada'}`;
-  } else if (isDecide)       stepLabel = '';
-  else if (step === 'final') stepLabel = 'Finalização';
+    stepLabel = si === 0 ? 'Partida' : `${si}ª Parada`;
+  } else if (step === 'final') stepLabel = 'Finalização';
   document.getElementById('form-step-count').textContent = stepLabel;
 
   const bar = document.getElementById('steps-bar');
   bar.innerHTML = '';
-  visibleSteps.forEach((s, i) => {
+  steps.forEach((s, i) => {
     const d = document.createElement('div');
     d.className = 'step-dot' + (i < currentVisibleIdx ? ' done' : i === currentVisibleIdx ? ' active' : '');
     bar.appendChild(d);
@@ -799,18 +881,22 @@ function renderStep() {
   const btnSkip = document.getElementById('btn-skip');
   const btnNext = document.getElementById('btn-next');
   btnSkip.style.display = 'none';
-  btnPrev.style.display = (stepIdx > 0 && !isDecide) ? '' : 'none';
-  if (isDecide) {
-    btnNext.style.display = 'none';
+  btnPrev.style.display = stepIdx > 0 ? '' : 'none';
+  btnNext.style.display = '';
+
+  const isLastStep = stepIdx === steps.length - 1;
+  if (step === 'final') {
+    btnNext.textContent = '✅ Enviar Vistoria';
+    btnNext.className = 'btn-nav submit';
+  } else if (isLastStep && formMode === 'partida') {
+    btnNext.textContent = '💾 Salvar Partida';
+    btnNext.className = 'btn-nav submit';
+  } else if (isLastStep && formMode === 'parada') {
+    btnNext.textContent = '💾 Salvar Parada';
+    btnNext.className = 'btn-nav submit';
   } else {
-    btnNext.style.display = '';
-    if (step === 'final') {
-      btnNext.textContent = '✅ Enviar Vistoria';
-      btnNext.className = 'btn-nav submit';
-    } else {
-      btnNext.textContent = 'Próximo →';
-      btnNext.className = 'btn-nav next';
-    }
+    btnNext.textContent = 'Próximo →';
+    btnNext.className = 'btn-nav next';
   }
 
   // ── Content ──
@@ -818,7 +904,6 @@ function renderStep() {
   if (step === 'ident')              html = renderStepIdent();
   else if (step === 'carga')         html = renderStepCarga(cfg);
   else if (step.startsWith('stop-')) { const si = parseInt(step.split('-')[1]); html = renderStepStop(cfg, si); }
-  else if (isDecide)                 { const si = parseInt(step.split('-')[1]); html = renderDecide(si); }
   else if (step === 'final')         html = renderStepFinal();
 
   body.innerHTML = html;
@@ -830,6 +915,7 @@ function renderStep() {
     restoreIPSelections(si);
     restoreMotivo(si);
   }
+  if (step === 'final') renderPhotos();
   window.scrollTo(0, 0);
 }
 
@@ -1181,54 +1267,6 @@ function saveStop(stopIdx) {
   state.stops[stopIdx].comentarios = getVal(`f-comentarios-${stopIdx}`);
 }
 
-/* ─── TELA DE DECISÃO: Finalizar ou Nova Parada ─── */
-function renderDecide(stopIdx) {
-  const isPartida = stopIdx === 0;
-  const stopLabel = isPartida ? 'Partida' : `${stopIdx}ª Parada`;
-  const cfg = FORMS_CONFIG[state.formType];
-  const stop = state.stops[stopIdx];
-  const reprovados = Object.values(stop.items).filter(v => v === 'R').length;
-  const totalStops = state.stops.length;
-
-  return `
-    <div style="text-align:center; padding:16px 0 24px">
-      <div style="font-size:60px; margin-bottom:12px">🚛</div>
-      <div style="font-size:22px;font-weight:800;color:var(--gray-900);margin-bottom:6px">${stopLabel} Registrada!</div>
-      <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px">${cfg.pontos.length} pontos verificados · ${totalStops} parada(s) no total</div>
-      ${reprovados > 0
-        ? `<div style="display:inline-block;background:var(--danger-light);color:var(--danger);border-radius:10px;padding:5px 14px;font-size:13px;font-weight:700">⚠️ ${reprovados} item(ns) reprovado(s)</div>`
-        : `<div style="display:inline-block;background:var(--success-light);color:var(--success);border-radius:10px;padding:5px 14px;font-size:13px;font-weight:700">✅ Todos os itens aprovados</div>`}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-      <button onclick="goToFinal()" style="width:100%;background:var(--success);color:#fff;border:none;border-radius:var(--radius);padding:18px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(15,157,88,.3)">
-        ✅ Finalizar Viagem
-      </button>
-      <button onclick="addNewStop()" style="width:100%;background:#fff;color:var(--primary);border:2px solid var(--primary);border-radius:var(--radius);padding:15px;font-size:15px;font-weight:700;cursor:pointer">
-        ➕ Registrar Nova Parada
-      </button>
-    </div>
-    <div class="info-box" style="margin-top:20px">
-      <span class="ib-icon">💡</span>
-      <span>Você pode finalizar agora ou adicionar mais paradas se necessário. As fotos podem ser tiradas a qualquer momento pelo botão 📷.</span>
-    </div>
-  `;
-}
-
-function addNewStop() {
-  const newIdx = state.stops.length;
-  state.stops.push(createStop(newIdx, state.formType));
-  // Insere stop-N e decide-N antes do 'final'
-  const finalPos = steps.indexOf('final');
-  steps.splice(finalPos, 0, `stop-${newIdx}`, `decide-${newIdx}`);
-  stepIdx++; // avança para o novo stop
-  renderStep();
-}
-
-function goToFinal() {
-  stepIdx = steps.indexOf('final');
-  renderStep();
-}
-
 /* ─── STEP FINAL: Fotos e Finalização ─── */
 function renderStepFinal() {
   const dt = new Date();
@@ -1277,24 +1315,20 @@ function renderStepFinal() {
 ═══════════════════════════════════════ */
 function nextStep() {
   if (!validateStep()) return;
-  saveCurrentStep();
-  const step = steps[stepIdx];
-  if (step === 'final') {
-    submitForm();
-  } else if (stepIdx < steps.length - 1) {
-    stepIdx++;
-    renderStep();
+  const isLast = stepIdx === steps.length - 1;
+  if (isLast) {
+    if (formMode === 'partida') { savePartidaAndGoHome(); return; }
+    if (formMode === 'parada')  { saveParadaAndGoHome();  return; }
+    if (formMode === 'final')   { submitForm();           return; }
   }
+  saveCurrentStep();
+  stepIdx++;
+  renderStep();
 }
 
 function prevStep() {
   saveCurrentStep();
-  if (stepIdx > 0) {
-    stepIdx--;
-    // Pula telas de decisão ao voltar
-    if (steps[stepIdx] && steps[stepIdx].startsWith('decide-')) stepIdx--;
-    renderStep();
-  }
+  if (stepIdx > 0) { stepIdx--; renderStep(); }
 }
 
 function skipStep() { /* não utilizado no novo fluxo */ }
@@ -1407,7 +1441,6 @@ function removePhoto(i) { photos.splice(i, 1); renderPhotos(); updatePhotoFabCou
    SUBMETER
 ═══════════════════════════════════════ */
 function submitForm() {
-  saveCurrentStep();
   state.stops[0].motivo = state.stops[0].motivo || FORMS_CONFIG[state.formType].motivos[0];
 
   const hasReprovado = state.stops.some(s =>
@@ -1443,6 +1476,9 @@ function submitForm() {
 
   vistorias.push(vistoria);
   localStorage.setItem('vistorias_mc', JSON.stringify(vistorias));
+  // Limpa a viagem ativa
+  activeTrip = null;
+  localStorage.removeItem('activeTrip_mc');
 
   const dt = new Date(vistoria.datetime);
   document.getElementById('success-time').textContent =
@@ -1522,6 +1558,31 @@ function renderHome() {
     document.getElementById('last-vistoria-text').textContent = formatTime(new Date(last.datetime));
   }
 
+  // ── Viagem em andamento ──
+  const activeSec   = document.getElementById('active-trip-section');
+  const novaSec     = document.getElementById('nova-vistoria-section');
+  if (activeTrip) {
+    activeSec.style.display = '';
+    novaSec.style.display   = 'none';
+    const nParadas = activeTrip.stops ? activeTrip.stops.length : 0;
+    const carreta  = activeTrip.placaCarreta ? ` · ${activeTrip.placaCarreta}` : '';
+    document.getElementById('active-trip-info').innerHTML = `
+      <div style="font-size:16px;font-weight:800;color:var(--gray-900);margin-bottom:4px">
+        ${escHtml(activeTrip.motorista)} &nbsp;·&nbsp; ${escHtml(activeTrip.placaVeiculo)}${escHtml(carreta)}
+      </div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:3px">
+        ${escHtml(activeTrip.localColeta)} → ${escHtml(activeTrip.destino)}
+      </div>
+      <div style="font-size:12px;color:var(--gray-400)">
+        ${nParadas} parada(s) registrada(s) · iniciada ${formatTime(new Date(activeTrip.startedAt))}
+      </div>
+    `;
+  } else {
+    activeSec.style.display = 'none';
+    novaSec.style.display   = '';
+  }
+
+  // ── Recentes ──
   const recentEl = document.getElementById('recent-list');
   const recent = [...vistorias].reverse().slice(0, 3);
   if (!recent.length) {
