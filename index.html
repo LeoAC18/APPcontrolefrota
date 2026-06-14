@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MC Transportes — Vistoria</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1242a8;
+      --primary-light: #e8f0fe;
+      --success: #0f9d58;
+      --success-light: #e6f4ea;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --danger: #dc2626;
+      --danger-light: #fee2e2;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,.1), 0 4px 6px rgba(0,0,0,.05);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-100);
+      color: var(--gray-800);
+      min-height: 100vh;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+    .has-bottom-nav { padding-bottom: 76px; }
+
+    /* HEADER */
+    .header {
+      background: var(--primary);
+      color: #fff;
+      padding: 16px 20px 20px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .header-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
+    .header-date { font-size: 12px; opacity: .75; }
+    .btn-back {
+      background: rgba(255,255,255,.15);
+      border: none; color: #fff;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* HOME */
+    .home-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      padding: 0 20px 28px;
+      color: #fff;
+    }
+    .home-content { padding: 20px; flex: 1; }
+
+    .type-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .type-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 18px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border: 2px solid transparent;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-user-select: none;
+    }
+    .type-card:active { border-color: var(--primary); box-shadow: var(--shadow-lg); }
+    .type-card-icon {
+      width: 54px; height: 54px;
+      background: var(--primary-light);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .type-card-info .tc-code { font-size: 11px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .type-card-info .tc-title { font-size: 16px; font-weight: 700; color: var(--gray-900); margin: 2px 0; }
+    .type-card-info .tc-sub { font-size: 12px; color: var(--gray-500); }
+    .type-card-arrow { margin-left: auto; font-size: 20px; color: var(--gray-400); }
+
+    .btn-primary {
+      width: 100%; background: var(--primary); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 16px; font-size: 16px; font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26,86,219,.35);
+      transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:active { background: var(--primary-dark); }
+    .btn-secondary {
+      width: 100%; background: #fff; color: var(--primary);
+      border: 2px solid var(--primary); border-radius: var(--radius);
+      padding: 13px; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-secondary:active { background: var(--primary-light); }
+
+    .status-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .status-item { background: #fff; border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+    .status-item .s-label { font-size: 11px; color: var(--gray-500); }
+    .status-item .s-value { font-size: 16px; font-weight: 700; color: var(--gray-800); margin-top: 2px; }
+    .status-item .s-value.ok { color: var(--success); }
+
+    .section-title { font-size: 12px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+
+    .recent-item {
+      background: #fff; border-radius: var(--radius); padding: 12px 14px;
+      box-shadow: var(--shadow); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px; cursor: pointer;
+    }
+    .recent-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .recent-dot.ok { background: var(--success); }
+    .recent-dot.warn { background: var(--warning); }
+    .recent-title { font-size: 14px; font-weight: 600; }
+    .recent-sub { font-size: 12px; color: var(--gray-500); }
+    .recent-time { font-size: 12px; color: var(--gray-400); margin-left: auto; }
+    .empty-recent { text-align: center; padding: 24px; color: var(--gray-400); font-size: 13px; }
+
+    /* FORM */
+    .form-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      padding: 14px 20px 22px; color: #fff;
+    }
+    .form-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .form-step-count { font-size: 12px; opacity: .75; }
+    .form-title { font-size: 20px; font-weight: 800; }
+    .form-subtitle { font-size: 13px; opacity: .75; margin-top: 3px; }
+    .steps-bar { display: flex; gap: 4px; margin-top: 12px; }
+    .step-dot { height: 4px; border-radius: 2px; background: rgba(255,255,255,.25); flex: 1; transition: background .3s; }
+    .step-dot.done { background: #fff; }
+    .step-dot.active { background: rgba(255,255,255,.75); }
+
+    .form-body { padding: 20px; flex: 1; overflow-y: auto; }
+    .step-section { display: none; }
+    .step-section.active { display: block; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .step-label { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+    .step-title { font-size: 20px; font-weight: 800; color: var(--gray-900); margin-bottom: 18px; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+    .form-label .req { color: var(--danger); }
+    .form-input, .form-textarea, .form-select {
+      width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px;
+      padding: 12px 14px; font-size: 15px; color: var(--gray-800); background: #fff;
+      outline: none; transition: border-color .15s, box-shadow .15s; font-family: inherit;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+    }
+    .form-textarea { resize: none; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-fixed {
+      background: var(--gray-50); border: 1.5px solid var(--gray-200); border-radius: 10px;
+      padding: 12px 14px; font-size: 15px; color: var(--gray-600); font-weight: 500;
+    }
+
+    .info-box {
+      background: var(--primary-light); border-radius: 10px;
+      padding: 12px 14px; font-size: 13px; color: var(--primary-dark);
+      display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px;
+      border: 1px solid rgba(26,86,219,.15);
+    }
+    .info-box .ib-icon { flex-shrink: 0; font-size: 16px; margin-top: 1px; }
+    .info-box.warn { background: var(--warning-light); color: #78350f; border-color: #fde68a; }
+    .info-box.ok { background: var(--success-light); color: #065f46; border-color: #a7f3d0; }
+
+    /* VVTT box */
+    .vvtt-box {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+      padding: 12px 14px; margin-top: 8px; font-size: 12px; color: #78350f;
+    }
+    .vvtt-box strong { display: block; margin-bottom: 6px; font-size: 13px; }
+    .vvtt-item { display: flex; gap: 6px; margin-bottom: 4px; }
+    .vvtt-item .vv-tag {
+      background: #f59e0b; color: #fff; font-weight: 700; border-radius: 4px;
+      padding: 1px 6px; font-size: 11px; flex-shrink: 0; height: fit-content;
+    }
+
+    /* PRAGAS box */
+    .pragas-box {
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+      padding: 12px 14px; margin-top: 8px; font-size: 12px; color: #7f1d1d;
+    }
+    .pragas-box strong { display: block; margin-bottom: 4px; font-size: 13px; }
+
+    /* INSPECTION POINTS */
+    .ip-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+    .ip-card {
+      background: #fff; border-radius: 12px; border: 1.5px solid var(--gray-200);
+      overflow: hidden; box-shadow: var(--shadow);
+    }
+    .ip-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px 10px;
+    }
+    .ip-num {
+      width: 26px; height: 26px; background: var(--primary-light);
+      color: var(--primary-dark); border-radius: 7px; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ip-label { font-size: 14px; font-weight: 600; color: var(--gray-800); line-height: 1.3; }
+    .ip-buttons {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;
+      border-top: 1px solid var(--gray-100);
+    }
+    .ip-btn {
+      padding: 12px 6px; border: none; background: var(--gray-50);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .12s, color .12s;
+      color: var(--gray-600);
+      border-right: 1px solid var(--gray-100);
+    }
+    .ip-btn:last-child { border-right: none; }
+    .ip-btn:active { opacity: .8; }
+    .ip-btn.aprovado.selected { background: var(--success); color: #fff; }
+    .ip-btn.reprovado.selected { background: var(--danger); color: #fff; }
+    .ip-btn.na.selected { background: var(--gray-400); color: #fff; }
+    .ip-btn.aprovado:not(.selected):active { background: var(--success-light); }
+    .ip-btn.reprovado:not(.selected):active { background: var(--danger-light); }
+
+    /* STOP TYPE SELECTOR */
+    .motivo-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .motivo-item {
+      border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 12px 14px;
+      cursor: pointer; font-size: 14px; font-weight: 500; color: var(--gray-700);
+      background: #fff; transition: all .12s; -webkit-user-select: none;
+    }
+    .motivo-item.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+
+    /* FOTO */
+    .photo-area {
+      border: 2px dashed var(--gray-300); border-radius: var(--radius);
+      padding: 24px; text-align: center; cursor: pointer; background: var(--gray-50);
+      transition: border-color .15s; position: relative;
+    }
+    .photo-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .ph-icon { font-size: 32px; margin-bottom: 8px; }
+    .ph-text { font-size: 14px; font-weight: 600; color: var(--gray-600); }
+    .ph-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+    .photos-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .photo-thumb-wrap { position: relative; }
+    .photo-thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; border: 2px solid var(--gray-200); display: block; }
+    .photo-remove {
+      position: absolute; top: -6px; right: -6px;
+      width: 20px; height: 20px; background: var(--danger); color: #fff;
+      border-radius: 50%; border: none; font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* FORM FOOTER */
+    .form-footer {
+      padding: 14px 20px; background: #fff;
+      border-top: 1px solid var(--gray-100); display: flex; gap: 8px;
+    }
+    .btn-nav {
+      flex: 1; padding: 14px; border-radius: var(--radius);
+      font-size: 15px; font-weight: 700; cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-nav.next { background: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(26,86,219,.3); }
+    .btn-nav.next:active { background: var(--primary-dark); }
+    .btn-nav.prev { background: var(--gray-100); color: var(--gray-700); flex: 0 0 76px; }
+    .btn-nav.prev:active { background: var(--gray-200); }
+    .btn-nav.skip { background: var(--gray-100); color: var(--gray-500); flex: 0 0 76px; font-size: 13px; }
+    .btn-nav.submit { background: var(--success); color: #fff; box-shadow: 0 4px 12px rgba(15,157,88,.3); }
+    .btn-nav.submit:active { background: #0a7d46; }
+
+    /* SUCCESS */
+    .success-screen {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100vh;
+      padding: 32px 24px; background: linear-gradient(160deg, #f0fdf4 0%, #fff 60%);
+      text-align: center;
+    }
+    .success-icon {
+      width: 88px; height: 88px; background: var(--success); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 44px;
+      margin-bottom: 24px; box-shadow: 0 8px 24px rgba(15,157,88,.25);
+      animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .success-title { font-size: 26px; font-weight: 800; color: var(--gray-900); margin-bottom: 8px; }
+    .success-sub { font-size: 15px; color: var(--gray-500); line-height: 1.5; max-width: 280px; }
+    .success-card {
+      background: #fff; border-radius: var(--radius); padding: 16px 20px;
+      box-shadow: var(--shadow-md); width: 100%; margin: 24px 0; text-align: left;
+    }
+    .success-card .row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid var(--gray-100); font-size: 14px;
+    }
+    .success-card .row:last-child { border-bottom: none; }
+    .success-card .row .k { color: var(--gray-500); }
+    .success-card .row .v { font-weight: 600; color: var(--gray-800); }
+    .notify-banner {
+      background: var(--primary-light); border: 1px solid rgba(26,86,219,.2);
+      border-radius: var(--radius); padding: 12px 16px; width: 100%;
+      display: flex; align-items: center; gap: 10px; font-size: 13px;
+      color: var(--primary); margin-bottom: 16px;
+    }
+
+    /* HISTORY */
+    .history-content { padding: 16px 20px; flex: 1; }
+    .history-item { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+    .history-item-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .history-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .history-status-dot.ok { background: var(--success); }
+    .history-status-dot.warn { background: var(--warning); }
+    .history-item-info { flex: 1; }
+    .history-item-title { font-size: 14px; font-weight: 700; }
+    .history-item-sub { font-size: 12px; color: var(--gray-500); }
+    .history-item-time { font-size: 12px; color: var(--gray-400); white-space: nowrap; }
+    .history-item-body { padding: 0 16px 14px; display: none; border-top: 1px solid var(--gray-100); }
+    .history-item-body.open { display: block; padding-top: 12px; }
+    .history-field { font-size: 13px; margin-bottom: 8px; }
+    .history-field .hk { color: var(--gray-500); font-size: 11px; display: block; margin-bottom: 2px; }
+    .history-field .hv { color: var(--gray-800); font-weight: 500; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .badge.ok { background: var(--success-light); color: var(--success); }
+    .badge.warn { background: var(--warning-light); color: #92400e; }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      background: #fff; border-top: 1px solid var(--gray-200);
+      display: flex; padding: 8px 0 12px; z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: 5px 0; cursor: pointer; color: var(--gray-400);
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+      border: none; background: none;
+    }
+    .nav-item .nav-icon { font-size: 22px; }
+    .nav-item.active { color: var(--primary); }
+
+    .divider { height: 1px; background: var(--gray-100); margin: 14px 0; }
+    .mt-12 { margin-top: 12px; }
+    .text-muted { color: var(--gray-500); font-size: 13px; }
+
+    /* MANAGER */
+    .manager-banner {
+      background: var(--warning-light); border-bottom: 1px solid #fde68a;
+      padding: 8px 20px; font-size: 12px; font-weight: 600; color: #92400e;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     TELA: HOME
+══════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero">
+    <div class="header-top">
+      <div class="header-logo">
+        <img src="logomctransportes.png" style="height:28px;width:auto;object-fit:contain;background:#fff;border-radius:5px;padding:2px 6px" alt="MC Transportes" />
+      </div>
+      <span class="header-date" id="home-date"></span>
+    </div>
+    <div style="height:12px"></div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">Olá, Motorista 👋</div>
+    <div style="font-size:14px;opacity:.8">Selecione o tipo de vistoria para começar.</div>
+  </div>
+
+  <div class="home-content has-bottom-nav">
+    <div class="status-row">
+      <div class="status-item">
+        <div class="s-label">Última vistoria</div>
+        <div class="s-value ok" id="last-vistoria-text">—</div>
+      </div>
+      <div class="status-item">
+        <div class="s-label">Hoje</div>
+        <div class="s-value" id="vistorias-hoje">0 vistorias</div>
+      </div>
+    </div>
+
+    <div class="section-title">Nova Vistoria</div>
+    <div class="type-cards">
+      <div class="type-card" onclick="startForm('rmc045')">
+        <div class="type-card-icon">🚛</div>
+        <div class="type-card-info">
+          <div class="tc-code">RMC-045</div>
+          <div class="tc-title">Transporte Rodoviário</div>
+          <div class="tc-sub">21 pontos de verificação</div>
+        </div>
+        <div class="type-card-arrow">›</div>
+      </div>
+      <div class="type-card" onclick="startForm('rmc046')">
+        <div class="type-card-icon">📦</div>
+        <div class="type-card-info">
+          <div class="tc-code">RMC-046</div>
+          <div class="tc-title">Container FCL</div>
+          <div class="tc-sub">11 pontos de verificação</div>
+        </div>
+        <div class="type-card-arrow">›</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:8px">Últimas vistorias</div>
+    <div id="recent-list">
+      <div class="empty-recent">Nenhuma vistoria registrada ainda.</div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
+    <button class="nav-item" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
+    <button class="nav-item" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
+  </nav>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     TELA: FORMULÁRIO VISTORIA
+══════════════════════════════════════ -->
+<div id="screen-form" class="screen">
+  <div class="form-header">
+    <div class="form-header-top">
+      <button class="btn-back" onclick="goTo('home')">← Voltar</button>
+      <span class="form-step-count" id="form-step-count">Etapa 1 de 7</span>
+    </div>
+    <div class="form-title" id="form-title">Vistoria</div>
+    <div class="form-subtitle" id="form-subtitle"></div>
+    <div class="steps-bar" id="steps-bar"></div>
+  </div>
+
+  <div class="form-body" id="form-body"></div>
+
+  <div class="form-footer">
+    <button class="btn-nav prev" id="btn-prev" onclick="prevStep()" style="display:none">← Voltar</button>
+    <button class="btn-nav skip" id="btn-skip" onclick="skipStep()" style="display:none">Pular</button>
+    <button class="btn-nav next" id="btn-next" onclick="nextStep()">Próximo →</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     TELA: SUCESSO
+══════════════════════════════════════ -->
+<div id="screen-success" class="screen">
+  <div class="success-screen">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Vistoria Registrada!</div>
+    <div class="success-sub">O registro foi salvo com sucesso e o gestor foi notificado.</div>
+    <div class="success-card" id="success-details"></div>
+    <div class="notify-banner">
+      <span>📱</span>
+      Notificação enviada ao gestor · <strong id="success-time"></strong>
+    </div>
+
+    <!-- Download buttons (hidden initially) -->
+    <div id="download-area" style="display:none;width:100%;max-width:320px">
+      <a id="btn-download-word" href="#" download class="btn-primary" style="text-decoration:none;margin-bottom:10px">
+        📄 Baixar Relatório Word (.docx)
+      </a>
+      <a id="btn-download-pdf" href="#" download class="btn-secondary" style="text-decoration:none;display:none">
+        📕 Baixar Relatório PDF
+      </a>
+    </div>
+
+    <!-- Loading state -->
+    <div id="report-loading" style="display:none;text-align:center;color:var(--gray-500);font-size:14px;margin:12px 0">
+      ⏳ Gerando relatório Word/PDF...
+    </div>
+    <!-- Error state -->
+    <div id="report-error" style="display:none;background:var(--danger-light);color:var(--danger);border-radius:10px;padding:12px;font-size:13px;width:100%;max-width:320px;margin-bottom:12px"></div>
+
+    <button class="btn-primary" style="max-width:320px;margin-top:4px" onclick="goTo('home')">← Voltar ao início</button>
+    <button class="btn-secondary" style="max-width:320px" onclick="goTo('history')">📂 Ver histórico</button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     TELA: HISTÓRICO
+══════════════════════════════════════ -->
+<div id="screen-history" class="screen">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-logo">📂 Histórico de Vistorias</div>
+      <button class="btn-back" onclick="goTo('home')">← Início</button>
+    </div>
+  </div>
+  <div class="history-content has-bottom-nav" id="history-list"></div>
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
+    <button class="nav-item active" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
+    <button class="nav-item" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
+  </nav>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     TELA: GESTOR
+══════════════════════════════════════ -->
+<div id="screen-manager" class="screen">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-logo">📊 Painel do Gestor</div>
+      <button class="btn-back" onclick="goTo('home')">← Início</button>
+    </div>
+  </div>
+  <div class="manager-banner">🔒 Área restrita — acesso do gestor/empresa</div>
+  <div class="history-content has-bottom-nav">
+    <div class="status-row" style="margin-bottom:16px">
+      <div class="status-item">
+        <div class="s-label">Total de vistorias</div>
+        <div class="s-value" id="mgr-total">0</div>
+      </div>
+      <div class="status-item">
+        <div class="s-label">Com reprovação</div>
+        <div class="s-value" style="color:var(--warning)" id="mgr-reprovadas">0</div>
+      </div>
+    </div>
+    <div class="section-title">Todas as vistorias</div>
+    <div id="manager-list"><div class="empty-recent">Nenhuma vistoria registrada ainda.</div></div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-item" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
+    <button class="nav-item" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
+    <button class="nav-item active" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
+  </nav>
+</div>
+
+
+<script>
+/* ═══════════════════════════════════════
+   CONFIG DOS FORMULÁRIOS
+═══════════════════════════════════════ */
+const FORMS_CONFIG = {
+  rmc045: {
+    titulo: 'Transporte Rodoviário',
+    codigo: 'RMC-045-CL-TR-SC-R05',
+    icone: '🚛',
+    motivos: [
+      '01 - Início de Viagem',
+      '02 – Manutenção',
+      '03 – Refeição',
+      '04 – Necessidades fisiológicas',
+      '05 – Pernoite / Armazenamento',
+      '06 – Desatrelamento (Descida da Serra)'
+    ],
+    pontos: [
+      { id: 1,  label: 'Para-Choques', dica: null },
+      { id: 2,  label: 'Motor / Filtro de Ar', dica: 'Verifique sinais de adulteração no compartimento do motor e filtro de ar.' },
+      { id: 3,  label: 'Pneus / Aros', dica: 'Inspecione todos os pneus quanto a calibragem, desgaste e integridade dos aros.' },
+      { id: 4,  label: 'Piso da Cabine', dica: 'Verifique o piso interno da cabine por objetos ocultos ou compartimentos falsos.' },
+      { id: 5,  label: 'Tanque de ar / Combustível', dica: 'Verifique integridade dos tanques, mangueiras e ausência de objetos estranhos.' },
+      { id: 6,  label: 'Caixas de Ferramentas / Travamentos', dica: null },
+      { id: 7,  label: 'Tanque de Transmissão', dica: null },
+      { id: 8,  label: 'Área da Quinta Roda', dica: 'Inspecione a área de acoplamento quanto a objetos escondidos ou adulterações.' },
+      { id: 9,  label: 'Parte Externa / Chassis / Embaixo da Carroceria', dica: 'Use lanterna para inspecionar embaixo do veículo, chassis e estrutura externa.' },
+      { id: 10, label: 'Interior / Piso da Carroceria', dica: null },
+      { id: 11, label: 'Portas (Interno/Externo) e Sistema de Travamento', dica: null },
+      { id: 12, label: 'Paredes Laterais da Carroceria', dica: null },
+      { id: 13, label: 'Teto Interior / Exterior / Capota', dica: null },
+      { id: 14, label: 'Parede Dianteira', dica: null },
+      { id: 15, label: 'Unidade de Refrigeração', dica: 'Verifique a carcaça e compartimentos da unidade de refrigeração.' },
+      { id: 16, label: 'Escapamento / Caixa da Bateria', dica: null },
+      { id: 17, label: 'Cabine / Compartimentos Internos', dica: 'Inspecione dormitório, gavetas, armários e todos os compartimentos internos.' },
+      { id: 18, label: 'Lacre do Armador — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 19, label: 'Lacre MC Transportes — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 20, label: 'Lacre do Exportador — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 21, label: 'Ausência de Pragas Visíveis', dica: 'PRAGAS' }
+    ]
+  },
+  rmc046: {
+    titulo: 'Container FCL',
+    codigo: 'RMC-046-CL-CONTAINERES-EM-FCL-SC-R05',
+    icone: '📦',
+    motivos: [
+      '01 – Início de Viagem',
+      '02 - Manutenção',
+      '03 – Refeição',
+      '04 – Necessidades fisiológicas',
+      '05 – Pernoite / Armazenamento'
+    ],
+    pontos: [
+      { id: 1,  label: 'Chassis / Parte Externa', dica: 'Verifique toda a estrutura externa do chassis por danos ou adulterações.' },
+      { id: 2,  label: 'Portas — Interno, Externo e Mecanismos de Travamento', dica: 'Inspecione as portas por dentro e por fora. Teste todos os mecanismos de travamento.' },
+      { id: 3,  label: 'Lateral Direita (interno e externo)', dica: null },
+      { id: 4,  label: 'Lateral Esquerda (interno e externo)', dica: null },
+      { id: 5,  label: 'Parede Frontal', dica: null },
+      { id: 6,  label: 'Teto Interno', dica: 'TETO_MADEIRA' },
+      { id: 7,  label: 'Piso Interno', dica: 'Verifique toda a extensão do piso interno por irregularidades ou compartimentos falsos.' },
+      { id: 8,  label: 'Parede de Fundo (verificar profundidade)', dica: 'Meça a profundidade interna e compare com a externa para detectar espaços ocultos.' },
+      { id: 9,  label: 'Carcaça do Ventilador (Sistema de Refrigeração)', dica: null },
+      { id: 10, label: 'Lacre MC Transporte — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 11, label: 'Ausência de Pragas Visíveis', dica: 'PRAGAS' }
+    ]
+  }
+};
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let state = {};
+let currentStep = 0;
+const TOTAL_STEPS = 8; // 0=ident 1=carga 2=Partida 3=1aPar 4=2aPar 5=3aPar 6=fotos
+let photos = [];
+let vistorias = JSON.parse(localStorage.getItem('vistorias_mc') || '[]');
+
+const STEP_TITLES = [
+  'Identificação',
+  'Carga e Lacres',
+  'Partida',
+  '1ª Parada',
+  '2ª Parada',
+  '3ª Parada',
+  'Fotos e Finalização'
+];
+
+/* ═══════════════════════════════════════
+   NAVEGAÇÃO ENTRE TELAS
+═══════════════════════════════════════ */
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screenId).classList.add('active');
+  window.scrollTo(0, 0);
+  if (screenId === 'home') renderHome();
+  if (screenId === 'history') renderHistory();
+  if (screenId === 'manager') renderManager();
+}
+
+function startForm(type) {
+  state = {
+    formType: type,
+    processo: '', responsavel: '', motorista: '', cpf: '',
+    placaVeiculo: '', placaCarreta: '', localColeta: '', destino: '',
+    numContainer: '', tara: '', maxGross: '',
+    lacreArmador: '', lacreMC: '', lacreExportador: '',
+    stops: []
+  };
+  state.stops = [createStop(0, type), createStop(1, type), createStop(2, type), createStop(3, type)];
+  photos = [];
+  currentStep = 0;
+  goTo('form');
+  renderStep();
+}
+
+function createStop(idx, type) {
+  const cfg = FORMS_CONFIG[type || state.formType];
+  const items = {};
+  cfg.pontos.forEach(p => { items[p.id] = ''; });
+  return {
+    tipo: idx === 0 ? 'Partida' : `${idx}ª Parada`,
+    motivo: idx === 0 ? cfg.motivos[0] : '',
+    local: '',
+    items: items,
+    comentarios: '',
+    pulada: false
+  };
+}
+
+/* ═══════════════════════════════════════
+   RENDER DE CADA ETAPA
+═══════════════════════════════════════ */
+function renderStep() {
+  const cfg = FORMS_CONFIG[state.formType];
+  const body = document.getElementById('form-body');
+  const stepIdx = currentStep; // 0..6
+
+  document.getElementById('form-title').textContent = cfg.titulo;
+  document.getElementById('form-subtitle').textContent = cfg.codigo;
+  document.getElementById('form-step-count').textContent = `Etapa ${currentStep + 1} de ${TOTAL_STEPS - 1}`;
+
+  // Steps bar
+  const bar = document.getElementById('steps-bar');
+  bar.innerHTML = '';
+  for (let i = 0; i < TOTAL_STEPS - 1; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+    bar.appendChild(d);
+  }
+
+  // Nav buttons
+  document.getElementById('btn-prev').style.display = currentStep > 0 ? '' : 'none';
+  const skipBtn = document.getElementById('btn-skip');
+  const nextBtn = document.getElementById('btn-next');
+
+  // Steps 3-5 (paradas 1-3) can be skipped
+  skipBtn.style.display = (currentStep >= 3 && currentStep <= 5) ? '' : 'none';
+
+  if (currentStep === TOTAL_STEPS - 2) { // last real step
+    nextBtn.textContent = '✅ Enviar Vistoria';
+    nextBtn.className = 'btn-nav submit';
+  } else {
+    nextBtn.textContent = 'Próximo →';
+    nextBtn.className = 'btn-nav next';
+  }
+
+  // Render content
+  let html = '';
+  if (stepIdx === 0) html = renderStepIdent();
+  else if (stepIdx === 1) html = renderStepCarga(cfg);
+  else if (stepIdx >= 2 && stepIdx <= 5) html = renderStepStop(cfg, stepIdx - 2);
+  else if (stepIdx === 6) html = renderStepFinal();
+
+  body.innerHTML = html;
+
+  // Re-attach inspection point selections from state
+  if (stepIdx >= 2 && stepIdx <= 5) {
+    restoreIPSelections(stepIdx - 2);
+    restoreMotivo(stepIdx - 2);
+  }
+  if (stepIdx === 0) restoreIdent();
+  if (stepIdx === 1) restoreCarga();
+}
+
+/* ─── STEP 0: Identificação ─── */
+function renderStepIdent() {
+  return `
+    <div class="step-label">Etapa 1</div>
+    <div class="step-title">Identificação</div>
+    <div class="info-box">
+      <span class="ib-icon">ℹ️</span>
+      <div>Transportadora: <strong>MC TRANSPORTES</strong> · CNPJ: 19.326.067/0001-49 · ANTT: 50582811</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">N° do Processo</label>
+      <input class="form-input" id="f-processo" type="text" placeholder="Ex: PROC-2024-001" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome do Responsável pela Inspeção <span class="req">*</span></label>
+      <input class="form-input" id="f-responsavel" type="text" placeholder="Nome completo" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome do Motorista <span class="req">*</span></label>
+      <input class="form-input" id="f-motorista" type="text" placeholder="Nome completo do motorista" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">CPF do Motorista <span class="req">*</span></label>
+      <input class="form-input" id="f-cpf" type="text" placeholder="000.000.000-00" inputmode="numeric" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Placa do Veículo <span class="req">*</span></label>
+        <input class="form-input" id="f-placa-veiculo" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Placa da Carreta</label>
+        <input class="form-input" id="f-placa-carreta" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+      </div>
+    </div>
+  `;
+}
+
+function restoreIdent() {
+  setVal('f-processo', state.processo);
+  setVal('f-responsavel', state.responsavel);
+  setVal('f-motorista', state.motorista);
+  setVal('f-cpf', state.cpf);
+  setVal('f-placa-veiculo', state.placaVeiculo);
+  setVal('f-placa-carreta', state.placaCarreta);
+}
+
+function saveIdent() {
+  state.processo = getVal('f-processo');
+  state.responsavel = getVal('f-responsavel');
+  state.motorista = getVal('f-motorista');
+  state.cpf = getVal('f-cpf');
+  state.placaVeiculo = getVal('f-placa-veiculo').toUpperCase();
+  state.placaCarreta = getVal('f-placa-carreta').toUpperCase();
+}
+
+/* ─── STEP 1: Carga e Lacres ─── */
+function renderStepCarga(cfg) {
+  const isContainer = state.formType === 'rmc046';
+  return `
+    <div class="step-label">Etapa 2</div>
+    <div class="step-title">Carga e Lacres</div>
+    <div class="form-group">
+      <label class="form-label">Local da Coleta da Carga <span class="req">*</span></label>
+      <input class="form-input" id="f-local-coleta" type="text" placeholder="Cidade/Terminal de origem" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Destino da Carga <span class="req">*</span></label>
+      <input class="form-input" id="f-destino" type="text" placeholder="Cidade/Terminal de destino" />
+    </div>
+    ${isContainer ? `
+    <div class="form-group">
+      <label class="form-label">N° do Container <span class="req">*</span></label>
+      <input class="form-input" id="f-container" type="text" placeholder="Ex: MSCU1234567" style="text-transform:uppercase" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tara (kg)</label>
+        <input class="form-input" id="f-tara" type="number" placeholder="0" inputmode="numeric" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Max. Gross (kg)</label>
+        <input class="form-input" id="f-maxgross" type="number" placeholder="0" inputmode="numeric" />
+      </div>
+    </div>
+    ` : ''}
+    <div class="divider"></div>
+    <div class="section-title">Lacres</div>
+    <div class="form-group">
+      <label class="form-label">Lacre do Armador</label>
+      <input class="form-input" id="f-lacre-armador" type="text" placeholder="Número do lacre" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lacre MC Transportes</label>
+      <input class="form-input" id="f-lacre-mc" type="text" placeholder="Número do lacre" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lacre do Exportador</label>
+      <input class="form-input" id="f-lacre-exportador" type="text" placeholder="Número do lacre" />
+    </div>
+  `;
+}
+
+function restoreCarga() {
+  setVal('f-local-coleta', state.localColeta);
+  setVal('f-destino', state.destino);
+  if (state.formType === 'rmc046') {
+    setVal('f-container', state.numContainer);
+    setVal('f-tara', state.tara);
+    setVal('f-maxgross', state.maxGross);
+  }
+  setVal('f-lacre-armador', state.lacreArmador);
+  setVal('f-lacre-mc', state.lacreMC);
+  setVal('f-lacre-exportador', state.lacreExportador);
+}
+
+function saveCarga() {
+  state.localColeta = getVal('f-local-coleta');
+  state.destino = getVal('f-destino');
+  if (state.formType === 'rmc046') {
+    state.numContainer = getVal('f-container').toUpperCase();
+    state.tara = getVal('f-tara');
+    state.maxGross = getVal('f-maxgross');
+  }
+  state.lacreArmador = getVal('f-lacre-armador');
+  state.lacreMC = getVal('f-lacre-mc');
+  state.lacreExportador = getVal('f-lacre-exportador');
+  // Pre-fill partida local if not set
+  if (!state.stops[0].local && state.localColeta) {
+    state.stops[0].local = state.localColeta;
+  }
+}
+
+/* ─── STEPS 2-5: Inspeção por Parada ─── */
+function renderStepStop(cfg, stopIdx) {
+  const stop = state.stops[stopIdx];
+  const isPartida = stopIdx === 0;
+  const etapa = stopIdx + 3;
+
+  const motivoHtml = isPartida
+    ? `<div class="form-group">
+        <label class="form-label">Motivo da Parada</label>
+        <div class="form-fixed">${cfg.motivos[0]}</div>
+       </div>`
+    : `<div class="form-group">
+        <label class="form-label">Motivo da Parada <span class="req">*</span></label>
+        <div class="motivo-grid" id="motivo-grid">
+          ${cfg.motivos.map((m, i) => `
+            <div class="motivo-item" data-idx="${i}" onclick="selectMotivo(${stopIdx}, ${i}, this)">${m}</div>
+          `).join('')}
+        </div>
+       </div>`;
+
+  const pontosHtml = cfg.pontos.map(p => {
+    let dicaHtml = '';
+    if (p.dica === 'VVTT') {
+      dicaHtml = `<div class="vvtt-box">
+        <strong>🔒 Verificar com Metodologia V.V.T.T.</strong>
+        <div class="vvtt-item"><span class="vv-tag">V</span><span>Visualizar o lacre e os mecanismos de travamento — garantir integridade</span></div>
+        <div class="vvtt-item"><span class="vv-tag">V</span><span>Verificar o número do lacre em relação aos documentos de remessa</span></div>
+        <div class="vvtt-item"><span class="vv-tag">T</span><span>Tracionar / puxar o lacre — garantir que está afixado corretamente</span></div>
+        <div class="vvtt-item"><span class="vv-tag">T</span><span>Torcer e girar o lacre — garantir que não se desparafusa ou separa</span></div>
+      </div>`;
+    } else if (p.dica === 'PRAGAS') {
+      dicaHtml = `<div class="pragas-box">
+        <strong>🐛 O que verificar como pragas visíveis:</strong>
+        Insetos, animais ou invertebrados (vivos ou mortos), casulos, ossos, sangue, cabelos, carne, secreções ou excreções.<br><br>
+        Sementes, frutas, galhos, folhas, cascas, raízes, terra ou água que não seja da carga manifestada.
+      </div>`;
+    } else if (p.dica === 'TETO_MADEIRA') {
+      dicaHtml = `<div class="info-box warn" style="margin-top:6px">
+        <span class="ib-icon">🪵</span>
+        <span>Utilize um pedaço de madeira para bater no teto e ouvir o tipo de som emitido. Som oco pode indicar compartimento oculto.</span>
+      </div>`;
+    } else if (p.dica) {
+      dicaHtml = `<div class="info-box" style="margin-top:6px;margin-bottom:0">
+        <span class="ib-icon">ℹ️</span><span>${p.dica}</span>
+      </div>`;
+    }
+
+    return `
+      <div class="ip-card" id="ipc-${stopIdx}-${p.id}">
+        <div class="ip-header">
+          <div class="ip-num">${p.id}</div>
+          <div class="ip-label">${p.label}</div>
+        </div>
+        ${dicaHtml ? `<div style="padding:0 14px 10px">${dicaHtml}</div>` : ''}
+        <div class="ip-buttons">
+          <button class="ip-btn aprovado" data-stop="${stopIdx}" data-pid="${p.id}" data-val="A" onclick="setIP(this)">✅ Aprovado</button>
+          <button class="ip-btn reprovado" data-stop="${stopIdx}" data-pid="${p.id}" data-val="R" onclick="setIP(this)">❌ Reprovado</button>
+          <button class="ip-btn na" data-stop="${stopIdx}" data-pid="${p.id}" data-val="NA" onclick="setIP(this)">— N/A</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="step-label">Etapa ${etapa}</div>
+    <div class="step-title">${stop.tipo} — Inspeção</div>
+    ${motivoHtml}
+    <div class="form-group">
+      <label class="form-label">Local ${isPartida ? '(pré-preenchido da coleta)' : ''}</label>
+      <input class="form-input" id="f-local-${stopIdx}" type="text" placeholder="Nome do local / endereço" value="${escHtml(stop.local)}" />
+    </div>
+    <div class="divider"></div>
+    <div class="section-title">Pontos de Verificação (${cfg.pontos.length} itens)</div>
+    <div class="info-box" style="margin-bottom:12px">
+      <span class="ib-icon">👇</span>
+      <span>Para cada item abaixo, marque <strong>✅ Aprovado</strong>, <strong>❌ Reprovado</strong> ou <strong>— N/A</strong>.</span>
+    </div>
+    <div class="ip-list">${pontosHtml}</div>
+    <div class="form-group" style="margin-top:16px">
+      <label class="form-label">Comentários / Observações desta parada</label>
+      <textarea class="form-textarea" id="f-comentarios-${stopIdx}" placeholder="Descreva qualquer observação relevante...">${escHtml(stop.comentarios)}</textarea>
+    </div>
+  `;
+}
+
+function restoreIPSelections(stopIdx) {
+  const stop = state.stops[stopIdx];
+  document.querySelectorAll(`[data-stop="${stopIdx}"]`).forEach(btn => {
+    const pid = parseInt(btn.dataset.pid);
+    const val = btn.dataset.val;
+    if (stop.items[pid] === val) btn.classList.add('selected');
+  });
+}
+
+function restoreMotivo(stopIdx) {
+  if (stopIdx === 0) return;
+  const stop = state.stops[stopIdx];
+  if (!stop.motivo) return;
+  const cfg = FORMS_CONFIG[state.formType];
+  const idx = cfg.motivos.indexOf(stop.motivo);
+  if (idx < 0) return;
+  const items = document.querySelectorAll('#motivo-grid .motivo-item');
+  if (items[idx]) items[idx].classList.add('selected');
+}
+
+function selectMotivo(stopIdx, motivoIdx, el) {
+  document.querySelectorAll('#motivo-grid .motivo-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  state.stops[stopIdx].motivo = FORMS_CONFIG[state.formType].motivos[motivoIdx];
+}
+
+function setIP(btn) {
+  const stopIdx = parseInt(btn.dataset.stop);
+  const pid = parseInt(btn.dataset.pid);
+  const val = btn.dataset.val;
+  // Toggle off if already selected
+  const already = state.stops[stopIdx].items[pid] === val;
+  state.stops[stopIdx].items[pid] = already ? '' : val;
+  // Update UI
+  const siblings = document.querySelectorAll(`[data-stop="${stopIdx}"][data-pid="${pid}"]`);
+  siblings.forEach(b => b.classList.remove('selected'));
+  if (!already) btn.classList.add('selected');
+}
+
+function saveStop(stopIdx) {
+  state.stops[stopIdx].local = getVal(`f-local-${stopIdx}`);
+  state.stops[stopIdx].comentarios = getVal(`f-comentarios-${stopIdx}`);
+}
+
+/* ─── STEP 6: Fotos e Finalização ─── */
+function renderStepFinal() {
+  const dt = new Date();
+  const dateStr = dt.toLocaleDateString('pt-BR');
+  const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `
+    <div class="step-label">Etapa 7</div>
+    <div class="step-title">Fotos e Finalização</div>
+    <div class="form-group">
+      <label class="form-label">Fotos da Vistoria</label>
+      <div class="photo-area">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this)" />
+        <div class="ph-icon">📷</div>
+        <div class="ph-text">Tirar foto / Galeria</div>
+        <div class="ph-sub">Toque para capturar ou selecionar</div>
+      </div>
+      <div class="photos-preview" id="photos-preview"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome do Responsável pela Inspeção <span class="req">*</span></label>
+      <input class="form-input" id="f-resp-final" type="text" placeholder="Assinatura / nome do responsável" value="${escHtml(state.responsavel)}" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input class="form-input" id="f-data-final" type="text" value="${dateStr}" readonly />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hora</label>
+        <input class="form-input" id="f-hora-final" type="text" value="${timeStr}" readonly />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observações finais</label>
+      <textarea class="form-textarea" id="f-obs-final" placeholder="Qualquer observação adicional sobre a viagem ou a inspeção..."></textarea>
+    </div>
+    <div class="info-box ok" style="margin-top:8px">
+      <span class="ib-icon">📤</span>
+      Ao finalizar, o registro será salvo e enviado automaticamente ao gestor responsável.
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════
+   NAVEGAÇÃO DO FORMULÁRIO
+═══════════════════════════════════════ */
+function nextStep() {
+  if (!validateStep()) return;
+  saveCurrentStep();
+  if (currentStep < TOTAL_STEPS - 2) {
+    currentStep++;
+    renderStep();
+    document.getElementById('form-body').scrollTop = 0;
+    window.scrollTo(0, 0);
+  } else {
+    submitForm();
+  }
+}
+
+function prevStep() {
+  saveCurrentStep();
+  if (currentStep > 0) {
+    currentStep--;
+    renderStep();
+    window.scrollTo(0, 0);
+  }
+}
+
+function skipStep() {
+  if (currentStep >= 3 && currentStep <= 5) {
+    state.stops[currentStep - 2].pulada = true;
+    currentStep++;
+    renderStep();
+    window.scrollTo(0, 0);
+  }
+}
+
+function saveCurrentStep() {
+  if (currentStep === 0) saveIdent();
+  else if (currentStep === 1) saveCarga();
+  else if (currentStep >= 2 && currentStep <= 5) saveStop(currentStep - 2);
+}
+
+function validateStep() {
+  if (currentStep === 0) {
+    if (!getVal('f-responsavel') || !getVal('f-motorista') || !getVal('f-cpf') || !getVal('f-placa-veiculo')) {
+      flashError('Preencha os campos obrigatórios (*)'); return false;
+    }
+  }
+  if (currentStep === 1) {
+    if (!getVal('f-local-coleta') || !getVal('f-destino')) {
+      flashError('Informe o local de coleta e destino'); return false;
+    }
+    if (state.formType === 'rmc046' && !getVal('f-container')) {
+      flashError('Informe o número do container'); return false;
+    }
+  }
+  if (currentStep >= 2 && currentStep <= 5) {
+    const stopIdx = currentStep - 2;
+    if (stopIdx > 0 && !state.stops[stopIdx].motivo) {
+      // check selected motivo in DOM
+      const sel = document.querySelector('#motivo-grid .motivo-item.selected');
+      if (!sel) { flashError('Selecione o motivo da parada'); return false; }
+    }
+    // Check all points answered
+    const cfg = FORMS_CONFIG[state.formType];
+    const stop = state.stops[stopIdx];
+    const unanswered = cfg.pontos.filter(p => !stop.items[p.id]);
+    if (unanswered.length > 0) {
+      flashError(`Responda todos os ${cfg.pontos.length} pontos de verificação`); return false;
+    }
+  }
+  if (currentStep === 6) {
+    if (!getVal('f-resp-final')) {
+      flashError('Informe o nome do responsável'); return false;
+    }
+  }
+  return true;
+}
+
+function flashError(msg) {
+  const btn = document.getElementById('btn-next');
+  const orig = btn.textContent;
+  const origClass = btn.className;
+  btn.textContent = '⚠️ ' + msg;
+  btn.style.background = '#dc2626';
+  btn.style.fontSize = '12px';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.className = origClass;
+    btn.style.background = '';
+    btn.style.fontSize = '';
+  }, 2500);
+}
+
+/* ═══════════════════════════════════════
+   FOTOS
+═══════════════════════════════════════ */
+function addPhotos(input) {
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      photos.push({ name: file.name, src: e.target.result });
+      renderPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotos() {
+  const c = document.getElementById('photos-preview');
+  if (!c) return;
+  c.innerHTML = photos.map((p, i) => `
+    <div class="photo-thumb-wrap">
+      <img src="${p.src}" class="photo-thumb" alt="${p.name}" />
+      <button class="photo-remove" onclick="removePhoto(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function removePhoto(i) { photos.splice(i, 1); renderPhotos(); }
+
+/* ═══════════════════════════════════════
+   SUBMETER
+═══════════════════════════════════════ */
+function submitForm() {
+  saveCurrentStep();
+  state.stops[0].motivo = state.stops[0].motivo || FORMS_CONFIG[state.formType].motivos[0];
+
+  const hasReprovado = state.stops.some(s =>
+    !s.pulada && Object.values(s.items).some(v => v === 'R')
+  );
+
+  const vistoria = {
+    id: Date.now(),
+    datetime: new Date().toISOString(),
+    formType: state.formType,
+    formCodigo: FORMS_CONFIG[state.formType].codigo,
+    processo: state.processo,
+    responsavel: getVal('f-resp-final') || state.responsavel,
+    motorista: state.motorista,
+    cpf: state.cpf,
+    placaVeiculo: state.placaVeiculo,
+    placaCarreta: state.placaCarreta,
+    localColeta: state.localColeta,
+    destino: state.destino,
+    numContainer: state.numContainer,
+    tara: state.tara,
+    maxGross: state.maxGross,
+    lacreArmador: state.lacreArmador,
+    lacreMC: state.lacreMC,
+    lacreExportador: state.lacreExportador,
+    stops: state.stops,
+    obs: getVal('f-obs-final'),
+    dataInspecao: getVal('f-data-final'),
+    horaInspecao: getVal('f-hora-final'),
+    photos: photos.length,
+    hasReprovado: hasReprovado
+  };
+
+  vistorias.push(vistoria);
+  localStorage.setItem('vistorias_mc', JSON.stringify(vistorias));
+
+  // Preenche tela de sucesso
+  const dt = new Date(vistoria.datetime);
+  document.getElementById('success-time').textContent =
+    dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('success-details').innerHTML = `
+    <div class="row"><span class="k">Formulário</span><span class="v">${vistoria.formCodigo}</span></div>
+    <div class="row"><span class="k">Motorista</span><span class="v">${vistoria.motorista}</span></div>
+    <div class="row"><span class="k">Placa</span><span class="v">${vistoria.placaVeiculo}</span></div>
+    <div class="row"><span class="k">Rota</span><span class="v">${vistoria.localColeta} → ${vistoria.destino}</span></div>
+    <div class="row"><span class="k">Data/Hora</span><span class="v">${vistoria.dataInspecao} às ${vistoria.horaInspecao}</span></div>
+    <div class="row"><span class="k">Status</span><span class="v">
+      ${hasReprovado
+        ? '<span class="badge warn">⚠️ Itens Reprovados</span>'
+        : '<span class="badge ok">✅ Tudo Aprovado</span>'}
+    </span></div>
+  `;
+
+  goTo('success');
+
+  // Esconde downloads anteriores e mostra loading
+  document.getElementById('download-area').style.display = 'none';
+  document.getElementById('report-error').style.display = 'none';
+  document.getElementById('report-loading').style.display = 'block';
+
+  // Salva vistoria no servidor e gera Word + PDF
+  fetch('/api/vistorias', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(vistoria)
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('report-loading').style.display = 'none';
+    if (!data.ok) throw new Error(data.error || 'Erro desconhecido');
+
+    // Botão Word
+    const btnWord = document.getElementById('btn-download-word');
+    btnWord.href = data.wordUrl;
+    btnWord.setAttribute('download', data.wordFilename);
+
+    // Botão PDF (se disponível)
+    const btnPdf = document.getElementById('btn-download-pdf');
+    if (data.pdfUrl) {
+      btnPdf.href = data.pdfUrl;
+      btnPdf.setAttribute('download', data.pdfFilename);
+      btnPdf.style.display = 'flex';
+    }
+
+    document.getElementById('download-area').style.display = 'block';
+  })
+  .catch(err => {
+    document.getElementById('report-loading').style.display = 'none';
+    const errEl = document.getElementById('report-error');
+    // Se o servidor não está rodando, mostra instrução
+    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      errEl.textContent = '⚠️ Servidor não detectado. Inicie o servidor Node.js com: npm start';
+    } else {
+      errEl.textContent = '⚠️ Erro ao gerar relatório: ' + err.message;
+    }
+    errEl.style.display = 'block';
+  });
+}
+
+/* ═══════════════════════════════════════
+   HOME
+═══════════════════════════════════════ */
+function renderHome() {
+  const dateEl = document.getElementById('home-date');
+  dateEl.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+
+  const hoje = vistorias.filter(v => {
+    const d = new Date(v.datetime), n = new Date();
+    return d.toDateString() === n.toDateString();
+  });
+  document.getElementById('vistorias-hoje').textContent = hoje.length + ' vistoria' + (hoje.length !== 1 ? 's' : '');
+
+  if (vistorias.length > 0) {
+    const last = vistorias[vistorias.length - 1];
+    document.getElementById('last-vistoria-text').textContent = formatTime(new Date(last.datetime));
+  }
+
+  const recentEl = document.getElementById('recent-list');
+  const recent = [...vistorias].reverse().slice(0, 3);
+  if (!recent.length) {
+    recentEl.innerHTML = '<div class="empty-recent">Nenhuma vistoria registrada ainda.</div>';
+    return;
+  }
+  recentEl.innerHTML = recent.map(v => `
+    <div class="recent-item" onclick="goTo('history')">
+      <div class="recent-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
+      <div style="flex:1">
+        <div class="recent-title">${v.motorista} · ${v.placaVeiculo}</div>
+        <div class="recent-sub">${v.localColeta} → ${v.destino}</div>
+      </div>
+      <div class="recent-time">${formatTime(new Date(v.datetime))}</div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════
+   HISTÓRICO
+═══════════════════════════════════════ */
+function renderHistory() {
+  const c = document.getElementById('history-list');
+  if (!vistorias.length) {
+    c.innerHTML = '<div class="empty-recent" style="margin-top:40px">Nenhuma vistoria registrada ainda.</div>';
+    return;
+  }
+  c.innerHTML = [...vistorias].reverse().map((v, i) => {
+    const dt = new Date(v.datetime);
+    const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const stops = v.stops.filter(s => !s.pulada);
+    const reprovados = stops.reduce((acc, s) => {
+      const reps = Object.values(s.items).filter(x => x === 'R').length;
+      return acc + reps;
+    }, 0);
+
+    return `
+      <div class="history-item">
+        <div class="history-item-header" onclick="toggleHist('h${i}')">
+          <div class="history-status-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
+          <div class="history-item-info">
+            <div class="history-item-title">${v.motorista} · ${v.placaVeiculo}</div>
+            <div class="history-item-sub">${v.formCodigo} · ${v.localColeta} → ${v.destino}</div>
+          </div>
+          <div class="history-item-time">${dateStr}</div>
+        </div>
+        <div class="history-item-body" id="h${i}">
+          <div class="history-field"><span class="hk">Responsável</span><span class="hv">${v.responsavel}</span></div>
+          <div class="history-field"><span class="hk">CPF Motorista</span><span class="hv">${v.cpf}</span></div>
+          ${v.numContainer ? `<div class="history-field"><span class="hk">N° Container</span><span class="hv">${v.numContainer}</span></div>` : ''}
+          ${v.lacreArmador ? `<div class="history-field"><span class="hk">Lacres</span><span class="hv">Armador: ${v.lacreArmador} · MC: ${v.lacreMC} · Exportador: ${v.lacreExportador}</span></div>` : ''}
+          <div class="history-field"><span class="hk">Paradas inspecionadas</span><span class="hv">${stops.length} parada(s)</span></div>
+          <div class="history-field"><span class="hk">Itens reprovados</span><span class="hv" style="color:${reprovados > 0 ? 'var(--danger)' : 'inherit'}">${reprovados > 0 ? reprovados + ' item(ns) reprovado(s)' : 'Nenhum'}</span></div>
+          ${v.photos > 0 ? `<div class="history-field"><span class="hk">Fotos</span><span class="hv">${v.photos} foto(s)</span></div>` : ''}
+          ${v.obs ? `<div class="history-field"><span class="hk">Obs.</span><span class="hv">${v.obs}</span></div>` : ''}
+          <div class="mt-12">
+            <span class="badge ${v.hasReprovado ? 'warn' : 'ok'}">${v.hasReprovado ? '⚠️ Itens Reprovados' : '✅ Tudo Aprovado'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleHist(id) {
+  const b = document.getElementById(id);
+  if (b) b.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════
+   GESTOR
+═══════════════════════════════════════ */
+function renderManager() {
+  document.getElementById('mgr-total').textContent = vistorias.length;
+  document.getElementById('mgr-reprovadas').textContent = vistorias.filter(v => v.hasReprovado).length;
+  const c = document.getElementById('manager-list');
+  if (!vistorias.length) {
+    c.innerHTML = '<div class="empty-recent">Nenhuma vistoria registrada ainda.</div>';
+    return;
+  }
+  c.innerHTML = [...vistorias].reverse().map((v, i) => {
+    const dt = new Date(v.datetime);
+    const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const stops = v.stops.filter(s => !s.pulada);
+    const repItem = [];
+    stops.forEach(s => {
+      const cfg = FORMS_CONFIG[s.tipo === 'Partida' || s.tipo.includes('Parada') ? v.formType : v.formType];
+      Object.entries(s.items).forEach(([pid, val]) => {
+        if (val === 'R') {
+          const ponto = FORMS_CONFIG[v.formType].pontos.find(p => p.id === parseInt(pid));
+          if (ponto) repItem.push(`${s.tipo}: ${ponto.label}`);
+        }
+      });
+    });
+
+    return `
+      <div class="history-item">
+        <div class="history-item-header" onclick="toggleHist('m${i}')">
+          <div class="history-status-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
+          <div class="history-item-info">
+            <div class="history-item-title">${v.motorista} · ${v.placaVeiculo}</div>
+            <div class="history-item-sub">${v.localColeta} → ${v.destino} · ${v.dataInspecao}</div>
+          </div>
+          <div class="history-item-time">${dateStr}</div>
+        </div>
+        <div class="history-item-body" id="m${i}">
+          <div class="history-field"><span class="hk">Formulário</span><span class="hv">${v.formCodigo}</span></div>
+          <div class="history-field"><span class="hk">Processo</span><span class="hv">${v.processo || 'Não informado'}</span></div>
+          <div class="history-field"><span class="hk">CPF</span><span class="hv">${v.cpf}</span></div>
+          ${v.numContainer ? `<div class="history-field"><span class="hk">Container</span><span class="hv">${v.numContainer} · Tara: ${v.tara}kg · MaxGross: ${v.maxGross}kg</span></div>` : ''}
+          ${repItem.length > 0
+            ? `<div class="history-field"><span class="hk" style="color:var(--danger)">⚠️ Itens Reprovados</span><span class="hv" style="color:var(--danger)">${repItem.join('<br>')}</span></div>`
+            : ''}
+          <div class="history-field"><span class="hk">Fotos</span><span class="hv">${v.photos > 0 ? v.photos + ' foto(s)' : 'Nenhuma'}</span></div>
+          ${v.obs ? `<div class="history-field"><span class="hk">Observações</span><span class="hv">${v.obs}</span></div>` : ''}
+          <div class="mt-12"><span class="badge ${v.hasReprovado ? 'warn' : 'ok'}">${v.hasReprovado ? '⚠️ Atenção necessária' : '✅ Saída normal'}</span></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el && val) el.value = val;
+}
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatTime(d) {
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return Math.floor(diff / 60) + 'min atrás';
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+/* INIT */
+renderHome();
+</script>
+</body>
+</html>

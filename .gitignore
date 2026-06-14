@@ -1,0 +1,12 @@
+node_modules/
+android/app/build/
+android/.gradle/
+android/local.properties
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+*.log
+.DS_Store
+*.docx
+*.xml
+RMC-*.docx
+RMC-*.xml

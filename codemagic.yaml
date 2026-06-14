@@ -1,0 +1,50 @@
+workflows:
+  ios-release:
+    name: MC Vistoria — iOS Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+
+    environment:
+      ios_signing:
+        distribution_type: app_store        # troque por "ad_hoc" para testar sem App Store
+        bundle_identifier: br.com.mctransportes.vistoria
+      vars:
+        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_SCHEME: App
+      node: 20.11.0
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Instalar dependências Node
+        script: npm ci
+
+      - name: Copiar assets web para www/
+        script: |
+          # O webDir do Capacitor é "www" — já existe com index.html e assets
+          echo "www/ OK"
+
+      - name: Sincronizar Capacitor com iOS
+        script: npx cap sync ios
+
+      - name: Instalar Pods
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true          # sobe direto ao TestFlight após build

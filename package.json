@@ -1,0 +1,26 @@
+{
+  "name": "app-controle-frota",
+  "version": "1.0.0",
+  "description": "MC Transportes — Checklist de Vistoria com geração de Word/PDF",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:build:android": "npx cap sync android && npx cap build android",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "cors": "^2.8.5",
+    "docx": "^8.5.0",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
