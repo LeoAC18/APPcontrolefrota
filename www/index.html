@@ -649,6 +649,57 @@ const TOTAL_STEPS = 8;
 let photos = [];
 let vistorias = JSON.parse(localStorage.getItem('vistorias_mc') || '[]');
 
+// Dados do banco — carregados uma vez ao abrir o app
+let dbData = { motoristas: [], veiculos: [], carretas: [] };
+
+async function loadDbData() {
+  const base = window.SERVER_URL || '';
+  try {
+    const [mRes, vRes, cRes] = await Promise.all([
+      fetch(`${base}/api/motoristas`),
+      fetch(`${base}/api/veiculos`),
+      fetch(`${base}/api/carretas`),
+    ]);
+    if (mRes.ok) dbData.motoristas = await mRes.json();
+    if (vRes.ok) dbData.veiculos   = await vRes.json();
+    if (cRes.ok) dbData.carretas   = await cRes.json();
+  } catch (_) {
+    // Sem servidor — selects ficam com opção de digitação manual
+  }
+}
+
+function onMotoristaSelect(sel) {
+  const m = dbData.motoristas.find(x => String(x.id) === sel.value);
+  const cpfEl = document.getElementById('f-cpf');
+  if (cpfEl) cpfEl.value = m ? m.cpf : '';
+  state.motorista = m ? m.nome : '';
+  state.cpf       = m ? m.cpf  : '';
+}
+
+function onVeiculoSelect(sel) {
+  const v = dbData.veiculos.find(x => String(x.id) === sel.value);
+  state.placaVeiculo = v ? v.placa : '';
+  const badge = document.getElementById('antt-veiculo-badge');
+  if (badge) {
+    badge.textContent = v
+      ? `ANTT ${v.antt || '—'} · ${v.empresa_nome || '—'}`
+      : '';
+    badge.style.display = v ? '' : 'none';
+  }
+}
+
+function onCarretaSelect(sel) {
+  const c = dbData.carretas.find(x => String(x.id) === sel.value);
+  state.placaCarreta = c ? c.placa : '';
+  const badge = document.getElementById('antt-carreta-badge');
+  if (badge) {
+    badge.textContent = c
+      ? `ANTT ${c.antt || '—'} · ${c.empresa_nome || '—'}`
+      : '';
+    badge.style.display = c ? '' : 'none';
+  }
+}
+
 const STEP_TITLES = [
   'Identificação', 'Carga e Lacres', 'Partida',
   '1ª Parada', '2ª Parada', '3ª Parada', 'Fotos e Finalização'
@@ -748,6 +799,78 @@ function renderStep() {
 
 /* ─── STEP 0: Identificação ─── */
 function renderStepIdent() {
+  const hasDb = dbData.motoristas.length > 0;
+
+  const motoristaOpts = hasDb
+    ? dbData.motoristas.map(m =>
+        `<option value="${m.id}" ${state._motoristaId == m.id ? 'selected' : ''}>${m.nome} — CPF ${m.cpf}</option>`
+      ).join('')
+    : '';
+
+  const veiculoOpts = dbData.veiculos.length > 0
+    ? dbData.veiculos.map(v =>
+        `<option value="${v.id}" ${state._veiculoId == v.id ? 'selected' : ''}>${v.placa} — ${v.modelo || ''} (ANTT ${v.antt || '?'} · ${v.empresa_nome || '?'})</option>`
+      ).join('')
+    : '';
+
+  const carretaOpts = dbData.carretas.length > 0
+    ? dbData.carretas.map(c =>
+        `<option value="${c.id}" ${state._carretaId == c.id ? 'selected' : ''}>${c.placa} — ${c.modelo || ''} (ANTT ${c.antt || '?'} · ${c.empresa_nome || '?'})</option>`
+      ).join('')
+    : '';
+
+  const motoristaField = hasDb ? `
+    <div class="form-group">
+      <label class="form-label">Motorista <span class="req">*</span></label>
+      <select class="form-input form-select" id="f-motorista-sel" onchange="onMotoristaSelect(this)">
+        <option value="">Selecione o motorista...</option>
+        ${motoristaOpts}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">CPF do Motorista</label>
+      <input class="form-input" id="f-cpf" type="text" placeholder="Preenchido automaticamente"
+             value="${escHtml(state.cpf)}" readonly style="background:var(--gray-50);color:var(--gray-500)" />
+    </div>` : `
+    <div class="form-group">
+      <label class="form-label">Nome do Motorista <span class="req">*</span></label>
+      <input class="form-input" id="f-motorista" type="text" placeholder="Nome completo do motorista" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">CPF do Motorista <span class="req">*</span></label>
+      <input class="form-input" id="f-cpf" type="text" placeholder="000.000.000-00" inputmode="numeric" />
+    </div>`;
+
+  const veiculoField = veiculoOpts ? `
+    <div class="form-group">
+      <label class="form-label">Veículo (Cavalo) <span class="req">*</span></label>
+      <select class="form-input form-select" id="f-veiculo-sel" onchange="onVeiculoSelect(this)">
+        <option value="">Selecione o veículo...</option>
+        ${veiculoOpts}
+      </select>
+      <div id="antt-veiculo-badge" style="display:none;margin-top:6px;font-size:12px;font-weight:600;
+           color:var(--primary);background:var(--primary-light);border-radius:8px;padding:6px 10px"></div>
+    </div>` : `
+    <div class="form-group">
+      <label class="form-label">Placa do Veículo <span class="req">*</span></label>
+      <input class="form-input" id="f-placa-veiculo" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+    </div>`;
+
+  const carretaField = carretaOpts ? `
+    <div class="form-group">
+      <label class="form-label">Carreta / Semirreboque</label>
+      <select class="form-input form-select" id="f-carreta-sel" onchange="onCarretaSelect(this)">
+        <option value="">Sem carreta / selecione...</option>
+        ${carretaOpts}
+      </select>
+      <div id="antt-carreta-badge" style="display:none;margin-top:6px;font-size:12px;font-weight:600;
+           color:var(--success);background:var(--success-light);border-radius:8px;padding:6px 10px"></div>
+    </div>` : `
+    <div class="form-group">
+      <label class="form-label">Placa da Carreta</label>
+      <input class="form-input" id="f-placa-carreta" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+    </div>`;
+
   return `
     <div class="step-label">Etapa 1</div>
     <div class="step-title">Identificação</div>
@@ -760,46 +883,63 @@ function renderStepIdent() {
       <input class="form-input" id="f-processo" type="text" placeholder="Ex: PROC-2024-001" />
     </div>
     <div class="form-group">
-      <label class="form-label">Nome do Responsável pela Inspeção <span class="req">*</span></label>
+      <label class="form-label">Responsável pela Inspeção <span class="req">*</span></label>
       <input class="form-input" id="f-responsavel" type="text" placeholder="Nome completo" />
     </div>
-    <div class="form-group">
-      <label class="form-label">Nome do Motorista <span class="req">*</span></label>
-      <input class="form-input" id="f-motorista" type="text" placeholder="Nome completo do motorista" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">CPF do Motorista <span class="req">*</span></label>
-      <input class="form-input" id="f-cpf" type="text" placeholder="000.000.000-00" inputmode="numeric" />
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Placa do Veículo <span class="req">*</span></label>
-        <input class="form-input" id="f-placa-veiculo" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Placa da Carreta</label>
-        <input class="form-input" id="f-placa-carreta" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
-      </div>
-    </div>
+    ${motoristaField}
+    ${veiculoField}
+    ${carretaField}
   `;
 }
 
 function restoreIdent() {
-  setVal('f-processo', state.processo);
+  setVal('f-processo',    state.processo);
   setVal('f-responsavel', state.responsavel);
-  setVal('f-motorista', state.motorista);
-  setVal('f-cpf', state.cpf);
+  // modo sem banco
+  setVal('f-motorista',     state.motorista);
+  setVal('f-cpf',           state.cpf);
   setVal('f-placa-veiculo', state.placaVeiculo);
   setVal('f-placa-carreta', state.placaCarreta);
+  // modo com banco — dispara badges
+  const vSel = document.getElementById('f-veiculo-sel');
+  if (vSel && state._veiculoId) { vSel.value = state._veiculoId; onVeiculoSelect(vSel); }
+  const cSel = document.getElementById('f-carreta-sel');
+  if (cSel && state._carretaId) { cSel.value = state._carretaId; onCarretaSelect(cSel); }
 }
 
 function saveIdent() {
-  state.processo = getVal('f-processo');
+  state.processo    = getVal('f-processo');
   state.responsavel = getVal('f-responsavel');
-  state.motorista = getVal('f-motorista');
-  state.cpf = getVal('f-cpf');
-  state.placaVeiculo = getVal('f-placa-veiculo').toUpperCase();
-  state.placaCarreta = getVal('f-placa-carreta').toUpperCase();
+
+  // Modo com banco
+  const mSel = document.getElementById('f-motorista-sel');
+  if (mSel) {
+    state._motoristaId = mSel.value;
+    const m = dbData.motoristas.find(x => String(x.id) === mSel.value);
+    state.motorista = m ? m.nome : '';
+    state.cpf       = m ? m.cpf  : '';
+  } else {
+    state.motorista = getVal('f-motorista');
+    state.cpf       = getVal('f-cpf');
+  }
+
+  const vSel = document.getElementById('f-veiculo-sel');
+  if (vSel) {
+    state._veiculoId = vSel.value;
+    const v = dbData.veiculos.find(x => String(x.id) === vSel.value);
+    state.placaVeiculo = v ? v.placa : '';
+  } else {
+    state.placaVeiculo = getVal('f-placa-veiculo').toUpperCase();
+  }
+
+  const cSel = document.getElementById('f-carreta-sel');
+  if (cSel) {
+    state._carretaId = cSel.value;
+    const c = dbData.carretas.find(x => String(x.id) === cSel.value);
+    state.placaCarreta = c ? c.placa : '';
+  } else {
+    state.placaCarreta = getVal('f-placa-carreta').toUpperCase();
+  }
 }
 
 /* ─── STEP 1: Carga e Lacres ─── */
@@ -1090,7 +1230,12 @@ function saveCurrentStep() {
 
 function validateStep() {
   if (currentStep === 0) {
-    if (!getVal('f-responsavel') || !getVal('f-motorista') || !getVal('f-cpf') || !getVal('f-placa-veiculo')) {
+    const responsavel = getVal('f-responsavel');
+    const mSel = document.getElementById('f-motorista-sel');
+    const vSel = document.getElementById('f-veiculo-sel');
+    const motoristaOk = mSel ? !!mSel.value : !!getVal('f-motorista');
+    const veiculoOk   = vSel ? !!vSel.value : !!getVal('f-placa-veiculo');
+    if (!responsavel || !motoristaOk || !veiculoOk) {
       flashError('Preencha os campos obrigatórios (*)'); return false;
     }
   }
@@ -1430,6 +1575,7 @@ function formatTime(d) {
 }
 
 /* INIT */
+loadDbData().then(() => renderHome());
 renderHome();
 </script>
 </body>

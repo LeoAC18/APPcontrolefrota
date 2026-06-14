@@ -6,6 +6,7 @@ const fs         = require('fs');
 const { exec }   = require('child_process');
 const { gerarWord } = require('./gerarRelatorio');
 const { pool, initSchema } = require('./db');
+const DB_READY = !!process.env.DATABASE_URL;
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -43,11 +44,18 @@ function convertPdf(docxPath) {
   });
 }
 
+/* helper: executa query só se banco estiver pronto */
+async function dbQuery(sql, params = []) {
+  if (!DB_READY) return { rows: [] };
+  return pool.query(sql, params);
+}
+
 /* ─────────────────────────────────────────
    STATUS
 ───────────────────────────────────────── */
 app.get('/api/status', async (_req, res) => {
-  const { rows } = await pool.query(
+  if (!DB_READY) return res.json({ ok: true, message: 'Sem banco configurado', motoristas: 0, vistorias: 0, pendentes: 0 });
+  const { rows } = await dbQuery(
     `SELECT
        (SELECT COUNT(*) FROM motoristas) AS motoristas,
        (SELECT COUNT(*) FROM vistorias)  AS vistorias,
@@ -60,13 +68,13 @@ app.get('/api/status', async (_req, res) => {
    EMPRESAS
 ───────────────────────────────────────── */
 app.get('/api/empresas', async (_req, res) => {
-  const { rows } = await pool.query('SELECT * FROM empresas WHERE ativa = true ORDER BY nome');
+  const { rows } = await dbQuery('SELECT * FROM empresas WHERE ativa = true ORDER BY nome');
   res.json(rows);
 });
 
 app.post('/api/empresas', async (req, res) => {
   const { nome, cnpj, antt } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'INSERT INTO empresas (nome, cnpj, antt) VALUES ($1, $2, $3) RETURNING *',
     [nome, cnpj, antt]
   );
@@ -75,7 +83,7 @@ app.post('/api/empresas', async (req, res) => {
 
 app.put('/api/empresas/:id', async (req, res) => {
   const { nome, cnpj, antt, ativa } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'UPDATE empresas SET nome=$1, cnpj=$2, antt=$3, ativa=$4 WHERE id=$5 RETURNING *',
     [nome, cnpj, antt, ativa ?? true, req.params.id]
   );
@@ -87,7 +95,7 @@ app.put('/api/empresas/:id', async (req, res) => {
    VEÍCULOS (cavalos)
 ───────────────────────────────────────── */
 app.get('/api/veiculos', async (_req, res) => {
-  const { rows } = await pool.query(`
+  const { rows } = await dbQuery(`
     SELECT v.*, e.nome AS empresa_nome, e.cnpj, e.antt
     FROM veiculos v
     LEFT JOIN empresas e ON e.id = v.empresa_id
@@ -99,7 +107,7 @@ app.get('/api/veiculos', async (_req, res) => {
 
 app.post('/api/veiculos', async (req, res) => {
   const { placa, modelo, empresa_id } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'INSERT INTO veiculos (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
     [placa.toUpperCase(), modelo, empresa_id]
   );
@@ -108,7 +116,7 @@ app.post('/api/veiculos', async (req, res) => {
 
 app.put('/api/veiculos/:id', async (req, res) => {
   const { placa, modelo, empresa_id, ativo } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'UPDATE veiculos SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
     [placa?.toUpperCase(), modelo, empresa_id, ativo ?? true, req.params.id]
   );
@@ -120,7 +128,7 @@ app.put('/api/veiculos/:id', async (req, res) => {
    CARRETAS
 ───────────────────────────────────────── */
 app.get('/api/carretas', async (_req, res) => {
-  const { rows } = await pool.query(`
+  const { rows } = await dbQuery(`
     SELECT c.*, e.nome AS empresa_nome, e.cnpj, e.antt
     FROM carretas c
     LEFT JOIN empresas e ON e.id = c.empresa_id
@@ -132,7 +140,7 @@ app.get('/api/carretas', async (_req, res) => {
 
 app.post('/api/carretas', async (req, res) => {
   const { placa, modelo, empresa_id } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'INSERT INTO carretas (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
     [placa.toUpperCase(), modelo, empresa_id]
   );
@@ -141,7 +149,7 @@ app.post('/api/carretas', async (req, res) => {
 
 app.put('/api/carretas/:id', async (req, res) => {
   const { placa, modelo, empresa_id, ativo } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     'UPDATE carretas SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
     [placa?.toUpperCase(), modelo, empresa_id, ativo ?? true, req.params.id]
   );
@@ -153,7 +161,7 @@ app.put('/api/carretas/:id', async (req, res) => {
    MOTORISTAS
 ───────────────────────────────────────── */
 app.get('/api/motoristas', async (_req, res) => {
-  const { rows } = await pool.query(`
+  const { rows } = await dbQuery(`
     SELECT m.*,
            e.nome AS empresa_nome, e.cnpj, e.antt
     FROM motoristas m
@@ -171,7 +179,7 @@ app.get('/api/motoristas', async (_req, res) => {
 
 app.post('/api/motoristas', async (req, res) => {
   const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `INSERT INTO motoristas (nome, cpf, cnh, cnh_cat, tel, admissao, empresa_id, veiculo_texto, status, obs)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [nome, cpf, cnh, cnhCat || 'E', tel, admissao || null, empresa_id || null, veiculo || null, status || 'Disponível', obs || '']
@@ -182,7 +190,7 @@ app.post('/api/motoristas', async (req, res) => {
 
 app.put('/api/motoristas/:id', async (req, res) => {
   const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `UPDATE motoristas SET nome=$1, cpf=$2, cnh=$3, cnh_cat=$4, tel=$5, admissao=$6,
      empresa_id=$7, veiculo_texto=$8, status=$9, obs=$10 WHERE id=$11 RETURNING *`,
     [nome, cpf, cnh, cnhCat || 'E', tel, admissao || null, empresa_id || null, veiculo || null, status, obs || '', req.params.id]
@@ -193,7 +201,7 @@ app.put('/api/motoristas/:id', async (req, res) => {
 });
 
 app.delete('/api/motoristas/:id', async (req, res) => {
-  await pool.query('DELETE FROM motoristas WHERE id=$1', [req.params.id]);
+  await dbQuery('DELETE FROM motoristas WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
@@ -201,7 +209,7 @@ app.delete('/api/motoristas/:id', async (req, res) => {
    VISTORIAS
 ───────────────────────────────────────── */
 app.get('/api/vistorias', async (_req, res) => {
-  const { rows } = await pool.query(`
+  const { rows } = await dbQuery(`
     SELECT v.*,
            ev.nome AS empresa_veiculo_nome,
            ec.nome AS empresa_carreta_nome
@@ -234,7 +242,7 @@ app.post('/api/vistorias', async (req, res) => {
     // Resolve veiculo_id e antt a partir da placa, se existir no banco
     let veiculoId = null, anttVeiculo = null, empresaVeiculo = null;
     if (d.placaVeiculo) {
-      const vq = await pool.query(`
+      const vq = await dbQuery(`
         SELECT vv.id, e.antt, e.nome
         FROM veiculos vv LEFT JOIN empresas e ON e.id = vv.empresa_id
         WHERE vv.placa = $1`, [d.placaVeiculo.toUpperCase()]);
@@ -248,7 +256,7 @@ app.post('/api/vistorias', async (req, res) => {
     // Resolve carreta_id e antt (pode ser empresa diferente)
     let carretaId = null, anttCarreta = null, empresaCarreta = null;
     if (d.placaCarreta) {
-      const cq = await pool.query(`
+      const cq = await dbQuery(`
         SELECT cc.id, e.antt, e.nome
         FROM carretas cc LEFT JOIN empresas e ON e.id = cc.empresa_id
         WHERE cc.placa = $1`, [d.placaCarreta.toUpperCase()]);
@@ -262,12 +270,12 @@ app.post('/api/vistorias', async (req, res) => {
     // Resolve motorista_id
     let motoristaBd = null;
     if (d.motorista) {
-      const mq = await pool.query(
+      const mq = await dbQuery(
         'SELECT id FROM motoristas WHERE LOWER(nome) = LOWER($1) LIMIT 1', [d.motorista]);
       if (mq.rows.length) motoristaBd = mq.rows[0].id;
     }
 
-    const { rows } = await pool.query(`
+    const { rows } = await dbQuery(`
       INSERT INTO vistorias (
         form_type, form_codigo, processo, responsavel,
         motorista_id, motorista_nome, cpf,
@@ -295,7 +303,7 @@ app.post('/api/vistorias', async (req, res) => {
 
     // Incrementa contador do motorista
     if (motoristaBd) {
-      await pool.query(
+      await dbQuery(
         'UPDATE motoristas SET vistorias_count = vistorias_count + 1 WHERE id = $1',
         [motoristaBd]
       );
@@ -328,7 +336,7 @@ app.post('/api/vistorias', async (req, res) => {
 
 app.patch('/api/vistorias/:id/status', async (req, res) => {
   const { status, obs } = req.body;
-  const { rows } = await pool.query(
+  const { rows } = await dbQuery(
     `UPDATE vistorias SET status=$1, approved=$2, obs_gestor=COALESCE($3, obs_gestor)
      WHERE id=$4 RETURNING *`,
     [status, status === 'approved', obs || null, req.params.id]
@@ -340,12 +348,16 @@ app.patch('/api/vistorias/:id/status', async (req, res) => {
 /* ─────────────────────────────────────────
    INIT
 ───────────────────────────────────────── */
-initSchema().then(() => {
+const boot = DB_READY ? initSchema() : Promise.resolve();
+
+boot.then(() => {
   app.listen(PORT, () => {
     console.log(`\n✅ MC Transportes App`);
     console.log(`   → App motorista: http://localhost:${PORT}`);
     console.log(`   → Painel gestor: http://localhost:${PORT}/gestor`);
-    console.log(`   → API status:    http://localhost:${PORT}/api/status\n`);
+    console.log(`   → API status:    http://localhost:${PORT}/api/status`);
+    if (!DB_READY) console.log(`   ⚠️  DATABASE_URL não definida — APIs retornam dados vazios\n`);
+    else console.log('');
   });
 }).catch(err => {
   console.error('[ERRO] Falha ao inicializar banco:', err.message);
