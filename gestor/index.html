@@ -798,7 +798,9 @@
           <div class="section-title">Vistorias</div>
           <div class="section-sub">Registros de saída aguardando revisão e aprovados</div>
         </div>
-        <div class="gap-8">
+        <div class="gap-8" style="display:flex;gap:8px;align-items:center">
+          <span id="last-update-label" style="font-size:11px;color:var(--gray-400)"></span>
+          <button onclick="loadData()" class="btn btn-ghost btn-sm">↻ Atualizar</button>
           <select class="form-control" style="width:180px;padding:7px 10px;font-size:13px" onchange="filterVistorias(this.value)">
             <option value="all">Todas</option>
             <option value="pending">Aguardando aprovação</option>
@@ -808,6 +810,14 @@
         </div>
       </div>
 
+      <div id="api-status-banner" style="display:none;background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#991b1b;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⚠️</span>
+        <div>
+          <strong>Erro ao carregar dados da API</strong>
+          <div id="api-status-msg" style="margin-top:2px;font-size:12px;opacity:.8"></div>
+        </div>
+        <button onclick="loadData()" style="margin-left:auto;padding:6px 14px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">↻ Tentar novamente</button>
+      </div>
       <div class="card" id="vistorias-container"></div>
     </div>
 
@@ -1015,14 +1025,27 @@ async function loadData() {
       fetch('/api/motoristas'),
       fetch('/api/vistorias'),
     ]);
-    drivers   = await dRes.json();
-    vistorias = await vRes.json();
+    const dJson = await dRes.json();
+    const vJson = await vRes.json();
+
+    if (!dRes.ok) throw new Error(`API motoristas: ${dRes.status} — ${JSON.stringify(dJson)}`);
+    if (!vRes.ok) throw new Error(`API vistorias: ${vRes.status} — ${JSON.stringify(vJson)}`);
+
+    drivers   = dJson;
+    vistorias = vJson;
     // normaliza campos que o front espera
     vistorias.forEach(v => {
       if (!Array.isArray(v.avarias)) v.avarias = [];
       if (!Array.isArray(v.noises))  v.noises  = [];
       if (!v.km) v.km = 0;
     });
+
+    // esconde banner de erro e registra hora da última atualização
+    const banner = document.getElementById('api-status-banner');
+    if (banner) banner.style.display = 'none';
+    const lbl = document.getElementById('last-update-label');
+    if (lbl) lbl.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+
     updateBadges();
     const active = document.querySelector('.page.active');
     if (active) {
@@ -1034,6 +1057,14 @@ async function loadData() {
     }
   } catch (e) {
     console.error('Erro ao carregar dados da API:', e);
+    const banner = document.getElementById('api-status-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      const msg = document.getElementById('api-status-msg');
+      if (msg) msg.textContent = e.message || String(e);
+    }
+    const vc = document.getElementById('vistorias-container');
+    if (vc) vc.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;font-size:13px">❌ Não foi possível carregar as vistorias. Verifique a conexão com o servidor.<br><small style="color:#6b7280;margin-top:4px;display:block">${e.message || ''}</small></div>`;
   }
 }
 

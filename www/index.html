@@ -1547,9 +1547,9 @@ function submitForm() {
     document.getElementById('report-loading').style.display = 'none';
     const errEl = document.getElementById('report-error');
     if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      errEl.textContent = '⚠️ Sem conexão com o servidor. Verifique sua internet e a URL configurada em config.js.';
+      errEl.innerHTML = '⚠️ <strong>Sem conexão com o servidor.</strong> A vistoria foi salva no dispositivo mas o relatório não pôde ser gerado. Tente novamente quando houver conexão.';
     } else {
-      errEl.textContent = '⚠️ Erro ao gerar relatório: ' + err.message;
+      errEl.innerHTML = '⚠️ <strong>Erro no servidor:</strong> ' + err.message + '<br><small style="opacity:.7">A vistoria foi salva localmente mas pode não ter chegado ao gestor. Entre em contato com o suporte.</small>';
     }
     errEl.style.display = 'block';
   });
