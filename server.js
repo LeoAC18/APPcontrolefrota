@@ -12,9 +12,26 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '20mb' }));
+
+// CORS — permite que o app Capacitor (origem diferente) acesse a API
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// App mobile (Capacitor) — servido na raiz
 app.use(express.static(path.join(__dirname, 'www')));
+// Arquivos do projeto raiz (logo, gestor/)
 app.use(express.static(path.join(__dirname)));
 app.use('/relatorios', express.static(path.join(__dirname, 'relatorios')));
+
+// Rota explícita para o painel do gestor
+app.get('/gestor', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'gestor', 'index.html'));
+});
 
 const RELAT_DIR = path.join(__dirname, 'relatorios');
 if (!fs.existsSync(RELAT_DIR)) fs.mkdirSync(RELAT_DIR);
