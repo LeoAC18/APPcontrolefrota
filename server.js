@@ -327,13 +327,14 @@ app.post('/api/vistorias', async (req, res) => {
     }
 
     // Gera Word — o relatório usa tabela fixa de 4 paradas; preenche as faltantes com "pulada"
-    const stopsForReport = d.stops ? [...d.stops] : [];
+    const stopsForReport = d.stops ? [...d.stops].slice(0, 4) : [];
     while (stopsForReport.length < 4) {
       stopsForReport.push({
         tipo: `${stopsForReport.length}ª Parada`,
         motivo: '', local: '', items: {}, comentarios: '', pulada: true
       });
     }
+    console.log('[WORD] stops count:', stopsForReport.length, '| tipos:', stopsForReport.map(s => s.tipo));
     const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
     const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
@@ -353,8 +354,8 @@ app.post('/api/vistorias', async (req, res) => {
       pdfFilename:  pdfName || null,
     });
   } catch (err) {
-    console.error('[ERRO] POST /api/vistorias:', err);
-    res.status(500).json({ ok: false, error: err.message });
+    console.error('[ERRO] POST /api/vistorias:', err.stack || err);
+    res.status(500).json({ ok: false, error: err.message + ' | ' + (err.stack || '').split('\n')[1] });
   }
 });
 
