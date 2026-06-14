@@ -1,48 +1,22 @@
 'use strict';
-const express = require('express');
-const path    = require('path');
-const fs      = require('fs');
-const { exec } = require('child_process');
+require('dotenv').config();
+const express    = require('express');
+const path       = require('path');
+const fs         = require('fs');
+const { exec }   = require('child_process');
 const { gerarWord } = require('./gerarRelatorio');
+const { pool, initSchema } = require('./db');
 
 const app  = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '20mb' }));
-// www/ é o webDir do Capacitor — serve o app mobile na raiz
 app.use(express.static(path.join(__dirname, 'www')));
-// Mantém arquivos do projeto raiz (logo, gestor) acessíveis
 app.use(express.static(path.join(__dirname)));
 app.use('/relatorios', express.static(path.join(__dirname, 'relatorios')));
 
-// Pastas e arquivos de dados
-const RELAT_DIR     = path.join(__dirname, 'relatorios');
-const DATA_DIR      = path.join(__dirname, 'data');
-const MOTOR_FILE    = path.join(DATA_DIR, 'motoristas.json');
-const VISTORIA_FILE = path.join(DATA_DIR, 'vistorias.json');
-
-[RELAT_DIR, DATA_DIR].forEach(d => { if (!fs.existsSync(d)) fs.mkdirSync(d); });
-
-// Helpers de leitura/gravação JSON
-function readJson(file, def) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch { return def; }
-}
-function writeJson(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-// Seed inicial de motoristas se arquivo não existir
-if (!fs.existsSync(MOTOR_FILE)) {
-  writeJson(MOTOR_FILE, [
-    { id:1, nome:'Carlos Silva',   cpf:'123.456.789-00', cnh:'12345678', cnhCat:'E', tel:'(11) 99001-1234', admissao:'2021-03-15', veiculo:'ABC-1D23 — Scania R450',     status:'Disponível', vistorias:0, obs:'' },
-    { id:2, nome:'José Alves',     cpf:'234.567.890-11', cnh:'23456789', cnhCat:'E', tel:'(11) 98765-4321', admissao:'2019-07-01', veiculo:'DEF-4T56 — Volvo FH 500',   status:'Disponível', vistorias:0, obs:'' },
-    { id:3, nome:'Roberto Melo',   cpf:'345.678.901-22', cnh:'34567890', cnhCat:'E', tel:'(31) 97654-3210', admissao:'2022-01-10', veiculo:'XYZ-9K12 — Mercedes Actros', status:'Disponível', vistorias:0, obs:'' },
-  ]);
-}
-if (!fs.existsSync(VISTORIA_FILE)) {
-  writeJson(VISTORIA_FILE, []);
-}
+const RELAT_DIR = path.join(__dirname, 'relatorios');
+if (!fs.existsSync(RELAT_DIR)) fs.mkdirSync(RELAT_DIR);
 
 /* ─────────────────────────────────────────
    PDF via LibreOffice
@@ -58,105 +32,291 @@ function convertPdf(docxPath) {
     const outDir = path.dirname(docxPath);
     function tryNext(i) {
       if (i >= candidates.length) return resolve(null);
-      const cmd = `${candidates[i]} --headless --convert-to pdf --outdir "${outDir}" "${docxPath}"`;
-      exec(cmd, { timeout: 30000 }, err => {
-        if (err) return tryNext(i + 1);
-        const pdfPath = docxPath.replace(/\.docx$/, '.pdf');
-        resolve(fs.existsSync(pdfPath) ? pdfPath : null);
-      });
+      exec(`${candidates[i]} --headless --convert-to pdf --outdir "${outDir}" "${docxPath}"`,
+        { timeout: 30000 }, err => {
+          if (err) return tryNext(i + 1);
+          const pdfPath = docxPath.replace(/\.docx$/, '.pdf');
+          resolve(fs.existsSync(pdfPath) ? pdfPath : null);
+        });
     }
     tryNext(0);
   });
 }
 
 /* ─────────────────────────────────────────
+   STATUS
+───────────────────────────────────────── */
+app.get('/api/status', async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT
+       (SELECT COUNT(*) FROM motoristas) AS motoristas,
+       (SELECT COUNT(*) FROM vistorias)  AS vistorias,
+       (SELECT COUNT(*) FROM vistorias WHERE status = 'pending') AS pendentes`
+  );
+  res.json({ ok: true, message: 'MC Transportes API rodando', port: PORT, ...rows[0] });
+});
+
+/* ─────────────────────────────────────────
+   EMPRESAS
+───────────────────────────────────────── */
+app.get('/api/empresas', async (_req, res) => {
+  const { rows } = await pool.query('SELECT * FROM empresas WHERE ativa = true ORDER BY nome');
+  res.json(rows);
+});
+
+app.post('/api/empresas', async (req, res) => {
+  const { nome, cnpj, antt } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO empresas (nome, cnpj, antt) VALUES ($1, $2, $3) RETURNING *',
+    [nome, cnpj, antt]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/empresas/:id', async (req, res) => {
+  const { nome, cnpj, antt, ativa } = req.body;
+  const { rows } = await pool.query(
+    'UPDATE empresas SET nome=$1, cnpj=$2, antt=$3, ativa=$4 WHERE id=$5 RETURNING *',
+    [nome, cnpj, antt, ativa ?? true, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
+  res.json(rows[0]);
+});
+
+/* ─────────────────────────────────────────
+   VEÍCULOS (cavalos)
+───────────────────────────────────────── */
+app.get('/api/veiculos', async (_req, res) => {
+  const { rows } = await pool.query(`
+    SELECT v.*, e.nome AS empresa_nome, e.cnpj, e.antt
+    FROM veiculos v
+    LEFT JOIN empresas e ON e.id = v.empresa_id
+    WHERE v.ativo = true
+    ORDER BY v.placa
+  `);
+  res.json(rows);
+});
+
+app.post('/api/veiculos', async (req, res) => {
+  const { placa, modelo, empresa_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO veiculos (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
+    [placa.toUpperCase(), modelo, empresa_id]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/veiculos/:id', async (req, res) => {
+  const { placa, modelo, empresa_id, ativo } = req.body;
+  const { rows } = await pool.query(
+    'UPDATE veiculos SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
+    [placa?.toUpperCase(), modelo, empresa_id, ativo ?? true, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
+  res.json(rows[0]);
+});
+
+/* ─────────────────────────────────────────
+   CARRETAS
+───────────────────────────────────────── */
+app.get('/api/carretas', async (_req, res) => {
+  const { rows } = await pool.query(`
+    SELECT c.*, e.nome AS empresa_nome, e.cnpj, e.antt
+    FROM carretas c
+    LEFT JOIN empresas e ON e.id = c.empresa_id
+    WHERE c.ativo = true
+    ORDER BY c.placa
+  `);
+  res.json(rows);
+});
+
+app.post('/api/carretas', async (req, res) => {
+  const { placa, modelo, empresa_id } = req.body;
+  const { rows } = await pool.query(
+    'INSERT INTO carretas (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
+    [placa.toUpperCase(), modelo, empresa_id]
+  );
+  res.json(rows[0]);
+});
+
+app.put('/api/carretas/:id', async (req, res) => {
+  const { placa, modelo, empresa_id, ativo } = req.body;
+  const { rows } = await pool.query(
+    'UPDATE carretas SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
+    [placa?.toUpperCase(), modelo, empresa_id, ativo ?? true, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
+  res.json(rows[0]);
+});
+
+/* ─────────────────────────────────────────
    MOTORISTAS
 ───────────────────────────────────────── */
-app.get('/api/motoristas', (_req, res) => {
-  res.json(readJson(MOTOR_FILE, []));
+app.get('/api/motoristas', async (_req, res) => {
+  const { rows } = await pool.query(`
+    SELECT m.*,
+           e.nome AS empresa_nome, e.cnpj, e.antt
+    FROM motoristas m
+    LEFT JOIN empresas e ON e.id = m.empresa_id
+    ORDER BY m.nome
+  `);
+  // Compatibilidade com o painel: campo "vistorias" e "cnhCat"
+  res.json(rows.map(r => ({
+    ...r,
+    vistorias: r.vistorias_count,
+    cnhCat: r.cnh_cat,
+    veiculo: r.veiculo_texto,
+  })));
 });
 
-app.post('/api/motoristas', (req, res) => {
-  const list = readJson(MOTOR_FILE, []);
-  const novo = { id: Date.now(), vistorias: 0, ...req.body };
-  list.push(novo);
-  writeJson(MOTOR_FILE, list);
-  res.json(novo);
+app.post('/api/motoristas', async (req, res) => {
+  const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
+  const { rows } = await pool.query(
+    `INSERT INTO motoristas (nome, cpf, cnh, cnh_cat, tel, admissao, empresa_id, veiculo_texto, status, obs)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+    [nome, cpf, cnh, cnhCat || 'E', tel, admissao || null, empresa_id || null, veiculo || null, status || 'Disponível', obs || '']
+  );
+  const m = rows[0];
+  res.json({ ...m, vistorias: m.vistorias_count, cnhCat: m.cnh_cat, veiculo: m.veiculo_texto });
 });
 
-app.put('/api/motoristas/:id', (req, res) => {
-  const id   = Number(req.params.id);
-  const list = readJson(MOTOR_FILE, []);
-  const idx  = list.findIndex(m => m.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  list[idx] = { ...list[idx], ...req.body, id };
-  writeJson(MOTOR_FILE, list);
-  res.json(list[idx]);
+app.put('/api/motoristas/:id', async (req, res) => {
+  const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
+  const { rows } = await pool.query(
+    `UPDATE motoristas SET nome=$1, cpf=$2, cnh=$3, cnh_cat=$4, tel=$5, admissao=$6,
+     empresa_id=$7, veiculo_texto=$8, status=$9, obs=$10 WHERE id=$11 RETURNING *`,
+    [nome, cpf, cnh, cnhCat || 'E', tel, admissao || null, empresa_id || null, veiculo || null, status, obs || '', req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
+  const m = rows[0];
+  res.json({ ...m, vistorias: m.vistorias_count, cnhCat: m.cnh_cat, veiculo: m.veiculo_texto });
 });
 
-app.delete('/api/motoristas/:id', (req, res) => {
-  const id   = Number(req.params.id);
-  let list   = readJson(MOTOR_FILE, []);
-  list       = list.filter(m => m.id !== id);
-  writeJson(MOTOR_FILE, list);
+app.delete('/api/motoristas/:id', async (req, res) => {
+  await pool.query('DELETE FROM motoristas WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
 /* ─────────────────────────────────────────
    VISTORIAS
 ───────────────────────────────────────── */
-app.get('/api/vistorias', (_req, res) => {
-  res.json(readJson(VISTORIA_FILE, []));
+app.get('/api/vistorias', async (_req, res) => {
+  const { rows } = await pool.query(`
+    SELECT v.*,
+           ev.nome AS empresa_veiculo_nome,
+           ec.nome AS empresa_carreta_nome
+    FROM vistorias v
+    LEFT JOIN veiculos vv ON vv.id = v.veiculo_id
+    LEFT JOIN empresas ev ON ev.id = vv.empresa_id
+    LEFT JOIN carretas cc ON cc.id = v.carreta_id
+    LEFT JOIN empresas ec ON ec.id = cc.empresa_id
+    ORDER BY v.datetime DESC
+  `);
+  // Compatibilidade com o painel gestor existente
+  res.json(rows.map(r => ({
+    ...r,
+    motorista: r.motorista_nome,
+    placa:     r.placa_veiculo,
+    nf:        r.processo || '—',
+    km:        0,
+    carga:     '—',
+    urgencia:  r.has_reprovado ? 'Com reprovação' : 'Sem ocorrência',
+    avarias:   r.avarias || [],
+    noises:    r.noises  || [],
+  })));
 });
 
 app.post('/api/vistorias', async (req, res) => {
   try {
-    const vistoria = req.body;
-    if (!vistoria || !vistoria.formType) {
-      return res.status(400).json({ ok: false, error: 'Dados inválidos' });
+    const d = req.body;
+    if (!d || !d.formType) return res.status(400).json({ ok: false, error: 'Dados inválidos' });
+
+    // Resolve veiculo_id e antt a partir da placa, se existir no banco
+    let veiculoId = null, anttVeiculo = null, empresaVeiculo = null;
+    if (d.placaVeiculo) {
+      const vq = await pool.query(`
+        SELECT vv.id, e.antt, e.nome
+        FROM veiculos vv LEFT JOIN empresas e ON e.id = vv.empresa_id
+        WHERE vv.placa = $1`, [d.placaVeiculo.toUpperCase()]);
+      if (vq.rows.length) {
+        veiculoId      = vq.rows[0].id;
+        anttVeiculo    = vq.rows[0].antt;
+        empresaVeiculo = vq.rows[0].nome;
+      }
     }
 
-    // Persiste no arquivo
-    const list = readJson(VISTORIA_FILE, []);
-    const entry = {
-      id:       Date.now(),
-      status:   'pending',
-      approved: false,
-      ...vistoria,
-    };
-    list.push(entry);
-    writeJson(VISTORIA_FILE, list);
+    // Resolve carreta_id e antt (pode ser empresa diferente)
+    let carretaId = null, anttCarreta = null, empresaCarreta = null;
+    if (d.placaCarreta) {
+      const cq = await pool.query(`
+        SELECT cc.id, e.antt, e.nome
+        FROM carretas cc LEFT JOIN empresas e ON e.id = cc.empresa_id
+        WHERE cc.placa = $1`, [d.placaCarreta.toUpperCase()]);
+      if (cq.rows.length) {
+        carretaId      = cq.rows[0].id;
+        anttCarreta    = cq.rows[0].antt;
+        empresaCarreta = cq.rows[0].nome;
+      }
+    }
 
-    // Incrementa contador de vistorias do motorista
-    const motors = readJson(MOTOR_FILE, []);
-    const mIdx   = motors.findIndex(m =>
-      m.nome.toLowerCase() === (vistoria.motorista || '').toLowerCase()
+    // Resolve motorista_id
+    let motoristaBd = null;
+    if (d.motorista) {
+      const mq = await pool.query(
+        'SELECT id FROM motoristas WHERE LOWER(nome) = LOWER($1) LIMIT 1', [d.motorista]);
+      if (mq.rows.length) motoristaBd = mq.rows[0].id;
+    }
+
+    const { rows } = await pool.query(`
+      INSERT INTO vistorias (
+        form_type, form_codigo, processo, responsavel,
+        motorista_id, motorista_nome, cpf,
+        veiculo_id, placa_veiculo, antt_veiculo, empresa_veiculo,
+        carreta_id, placa_carreta, antt_carreta, empresa_carreta,
+        local_coleta, destino, num_container, tara, max_gross,
+        lacre_armador, lacre_mc, lacre_exportador,
+        stops, obs, data_inspecao, hora_inspecao,
+        photos_count, has_reprovado, status, datetime
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+        $16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,'pending',$30
+      ) RETURNING *`,
+      [
+        d.formType, d.formCodigo, d.processo, d.responsavel,
+        motoristaBd, d.motorista, d.cpf,
+        veiculoId, d.placaVeiculo, anttVeiculo, empresaVeiculo,
+        carretaId, d.placaCarreta, anttCarreta, empresaCarreta,
+        d.localColeta, d.destino, d.numContainer, d.tara || null, d.maxGross || null,
+        d.lacreArmador, d.lacreMC, d.lacreExportador,
+        JSON.stringify(d.stops || []), d.obs, d.dataInspecao, d.horaInspecao,
+        d.photos || 0, d.hasReprovado || false, new Date(d.datetime || Date.now()),
+      ]
     );
-    if (mIdx !== -1) {
-      motors[mIdx].vistorias = (motors[mIdx].vistorias || 0) + 1;
-      writeJson(MOTOR_FILE, motors);
+
+    // Incrementa contador do motorista
+    if (motoristaBd) {
+      await pool.query(
+        'UPDATE motoristas SET vistorias_count = vistorias_count + 1 WHERE id = $1',
+        [motoristaBd]
+      );
     }
 
     // Gera Word
-    const ts        = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const motorNorm = (vistoria.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    const base      = `${(vistoria.formType || 'vistoria').toUpperCase()}_${motorNorm}_${ts}`;
-    const docxName  = `${base}.docx`;
-    const docxPath  = path.join(RELAT_DIR, docxName);
-
-    const buffer = await gerarWord(vistoria);
+    const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
+    const docxPath = path.join(RELAT_DIR, `${base}.docx`);
+    const buffer   = await gerarWord(d);
     fs.writeFileSync(docxPath, buffer);
-    console.log(`[OK] Word gerado: ${docxName}`);
 
     const pdfPath = await convertPdf(docxPath);
     const pdfName = pdfPath ? path.basename(pdfPath) : null;
-    if (pdfName) console.log(`[OK] PDF gerado: ${pdfName}`);
 
     res.json({
-      ok:           true,
-      id:           entry.id,
-      wordUrl:      `/relatorios/${docxName}`,
-      wordFilename: docxName,
+      ok: true,
+      id: rows[0].id,
+      wordUrl:      `/relatorios/${base}.docx`,
+      wordFilename: `${base}.docx`,
       pdfUrl:       pdfName ? `/relatorios/${pdfName}` : null,
       pdfFilename:  pdfName || null,
     });
@@ -166,63 +326,28 @@ app.post('/api/vistorias', async (req, res) => {
   }
 });
 
-// Aprovar / reprovar vistoria
-app.patch('/api/vistorias/:id/status', (req, res) => {
-  const id     = Number(req.params.id);
-  const list   = readJson(VISTORIA_FILE, []);
-  const idx    = list.findIndex(v => v.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
-  const { status, obs } = req.body; // 'approved' | 'rejected'
-  list[idx].status   = status;
-  list[idx].approved = status === 'approved';
-  if (obs !== undefined) list[idx].obsGestor = obs;
-  writeJson(VISTORIA_FILE, list);
-  res.json(list[idx]);
+app.patch('/api/vistorias/:id/status', async (req, res) => {
+  const { status, obs } = req.body;
+  const { rows } = await pool.query(
+    `UPDATE vistorias SET status=$1, approved=$2, obs_gestor=COALESCE($3, obs_gestor)
+     WHERE id=$4 RETURNING *`,
+    [status, status === 'approved', obs || null, req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
+  res.json(rows[0]);
 });
 
 /* ─────────────────────────────────────────
-   Rota legada — mantida por compatibilidade
+   INIT
 ───────────────────────────────────────── */
-app.post('/api/relatorio', async (req, res) => {
-  try {
-    const vistoria = req.body;
-    if (!vistoria || !vistoria.formType) {
-      return res.status(400).json({ ok: false, error: 'Dados inválidos' });
-    }
-    const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const motorista = (vistoria.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    const base     = `${vistoria.formType.toUpperCase()}_${motorista}_${ts}`;
-    const docxName = `${base}.docx`;
-    const docxPath = path.join(RELAT_DIR, docxName);
-    const buffer   = await gerarWord(vistoria);
-    fs.writeFileSync(docxPath, buffer);
-    console.log(`[OK] Word gerado: ${docxName}`);
-    const pdfPath  = await convertPdf(docxPath);
-    const pdfName  = pdfPath ? path.basename(pdfPath) : null;
-    res.json({ ok: true, wordUrl: `/relatorios/${docxName}`, wordFilename: docxName, pdfUrl: pdfName ? `/relatorios/${pdfName}` : null, pdfFilename: pdfName || null });
-  } catch (err) {
-    console.error('[ERRO] /api/relatorio:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-app.get('/api/status', (_req, res) => {
-  const vistorias = readJson(VISTORIA_FILE, []);
-  const motors    = readJson(MOTOR_FILE, []);
-  res.json({
-    ok: true,
-    message: 'MC Transportes API rodando',
-    port: PORT,
-    motoristas: motors.length,
-    vistorias: vistorias.length,
-    pendentes: vistorias.filter(v => v.status === 'pending').length,
+initSchema().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n✅ MC Transportes App`);
+    console.log(`   → App motorista: http://localhost:${PORT}`);
+    console.log(`   → Painel gestor: http://localhost:${PORT}/gestor`);
+    console.log(`   → API status:    http://localhost:${PORT}/api/status\n`);
   });
-});
-
-app.listen(PORT, () => {
-  console.log(`\n✅ MC Transportes App`);
-  console.log(`   → App motorista: http://localhost:${PORT}`);
-  console.log(`   → Painel gestor: http://localhost:${PORT}/gestor`);
-  console.log(`   → API status:    http://localhost:${PORT}/api/status`);
-  console.log(`   → Dados em:      ${DATA_DIR}\n`);
+}).catch(err => {
+  console.error('[ERRO] Falha ao inicializar banco:', err.message);
+  process.exit(1);
 });

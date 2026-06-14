@@ -1,4 +1,7 @@
 node_modules/
+.env
+relatorios/
+data/
 android/app/build/
 android/.gradle/
 android/local.properties
