@@ -3,8 +3,8 @@ require('dotenv').config();
 const express    = require('express');
 const path       = require('path');
 const fs         = require('fs');
-const { exec }   = require('child_process');
 const { gerarWord } = require('./gerarRelatorio');
+const { gerarPdf }  = require('./gerarRelatorioPdf');
 const { pool, initSchema } = require('./db');
 const DB_READY = !!process.env.DATABASE_URL;
 
@@ -35,31 +35,6 @@ app.get('/gestor', (_req, res) => {
 
 const RELAT_DIR = path.join(__dirname, 'relatorios');
 if (!fs.existsSync(RELAT_DIR)) fs.mkdirSync(RELAT_DIR);
-
-/* ─────────────────────────────────────────
-   PDF via LibreOffice
-───────────────────────────────────────── */
-function convertPdf(docxPath) {
-  return new Promise(resolve => {
-    const candidates = [
-      'soffice', 'libreoffice',
-      '"C:\\Program Files\\LibreOffice\\program\\soffice.exe"',
-      '"C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe"',
-      '/usr/bin/libreoffice', '/usr/bin/soffice',
-    ];
-    const outDir = path.dirname(docxPath);
-    function tryNext(i) {
-      if (i >= candidates.length) return resolve(null);
-      exec(`${candidates[i]} --headless --convert-to pdf --outdir "${outDir}" "${docxPath}"`,
-        { timeout: 30000 }, err => {
-          if (err) return tryNext(i + 1);
-          const pdfPath = docxPath.replace(/\.docx$/, '.pdf');
-          resolve(fs.existsSync(pdfPath) ? pdfPath : null);
-        });
-    }
-    tryNext(0);
-  });
-}
 
 /* helper: executa query só se banco estiver pronto */
 async function dbQuery(sql, params = []) {
@@ -335,31 +310,40 @@ app.post('/api/vistorias', async (req, res) => {
       );
     }
 
-    // Gera Word — o relatório usa tabela fixa de 4 paradas; preenche as faltantes com "pulada"
+    // Preenche paradas faltantes com "pulada" para relatório de 4 colunas
     const stopsForReport = d.stops ? [...d.stops].slice(0, 4) : [];
     while (stopsForReport.length < 4) {
-      stopsForReport.push({
-        tipo: `${stopsForReport.length}ª Parada`,
-        motivo: '', local: '', items: {}, comentarios: '', pulada: true
-      });
+      stopsForReport.push({ motivo: '', local: '', items: {}, comentarios: '', pulada: true });
     }
-    console.log('[WORD] stops count:', stopsForReport.length, '| tipos:', stopsForReport.map(s => s.tipo));
-    const docxPath = path.join(RELAT_DIR, `${base}.docx`);
-    const buffer   = await gerarWord({ ...d, stops: stopsForReport });
-    fs.writeFileSync(docxPath, buffer);
 
-    const pdfPath = await convertPdf(docxPath);
-    const pdfName = pdfPath ? path.basename(pdfPath) : null;
+    const vistoriaData = { ...d, stops: stopsForReport };
+
+    // Gera Word (.docx)
+    const docxPath = path.join(RELAT_DIR, `${base}.docx`);
+    const wordBuf  = await gerarWord(vistoriaData);
+    fs.writeFileSync(docxPath, wordBuf);
+
+    // Gera PDF diretamente via pdfkit (sem LibreOffice)
+    let pdfOk = false;
+    try {
+      const pdfPath = path.join(RELAT_DIR, `${base}.pdf`);
+      const pdfBuf  = await gerarPdf(vistoriaData);
+      fs.writeFileSync(pdfPath, pdfBuf);
+      pdfOk = true;
+      console.log(`[PDF] Gerado: ${base}.pdf`);
+    } catch (pdfErr) {
+      console.error('[PDF] Falha ao gerar PDF:', pdfErr.message);
+    }
 
     const savedId = (rows && rows.length) ? rows[0].id : null;
     console.log(`[VISTORIA] Salva no banco: id=${savedId} motorista="${d.motorista}" tipo=${d.formType}`);
     res.json({
       ok: true,
-      id: savedId,
+      id:           savedId,
       wordUrl:      `/relatorios/${base}.docx`,
       wordFilename: `${base}.docx`,
-      pdfUrl:       pdfName ? `/relatorios/${pdfName}` : null,
-      pdfFilename:  pdfName || null,
+      pdfUrl:       pdfOk ? `/relatorios/${base}.pdf` : null,
+      pdfFilename:  pdfOk ? `${base}.pdf` : null,
     });
   } catch (err) {
     console.error('[ERRO] POST /api/vistorias:', err.stack || err);
