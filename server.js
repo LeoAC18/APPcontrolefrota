@@ -1,29 +1,51 @@
 'use strict';
 require('dotenv').config();
-const express    = require('express');
-const path       = require('path');
-const fs         = require('fs');
-const bcrypt     = require('bcryptjs');
-const jwt        = require('jsonwebtoken');
+const express       = require('express');
+const path          = require('path');
+const fs            = require('fs');
+const bcrypt        = require('bcryptjs');
+const jwt           = require('jsonwebtoken');
+const helmet        = require('helmet');
+const rateLimit     = require('express-rate-limit');
 const { gerarWord } = require('./gerarRelatorio');
 const { gerarPdf }  = require('./gerarRelatorioPdf');
 const { pool, initSchema } = require('./db');
 const DB_READY = !!process.env.DATABASE_URL;
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mc-frota-secret-2024';
+if (!process.env.JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET não definida. Configure a variável de ambiente antes de iniciar.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '20mb' }));
+// HTTP security headers
+app.use(helmet({
+  contentSecurityPolicy: false,       // Capacitor/app inline scripts requerem desativar
+  crossOriginEmbedderPolicy: false,
+}));
 
-// CORS
+// Body limit — dados de vistoria são texto, não base64 de fotos
+app.use(express.json({ limit: '2mb' }));
+
+// CORS — wildcard necessário para Capacitor nativo (sem Origin header)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
+});
+
+// Rate limiting no login — máx 10 tentativas por IP em 15 min
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Aguarde 15 minutos.' },
 });
 
 const RELAT_DIR = path.join(__dirname, 'relatorios');
@@ -71,7 +93,7 @@ function requireGestor(req, res, next) {
 /* ─────────────────────────────────────────
    AUTH
 ───────────────────────────────────────── */
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
     const { login, senha } = req.body;
     if (!login || !senha) return res.status(400).json({ error: 'Login e senha obrigatórios' });
@@ -449,7 +471,7 @@ app.post('/api/vistorias', verifyToken, async (req, res) => {
     });
   } catch (err) {
     console.error('[ERRO] POST /api/vistorias:', err.stack || err);
-    res.status(500).json({ ok: false, error: err.message + ' | ' + (err.stack || '').split('\n')[1] });
+    res.status(500).json({ ok: false, error: 'Erro ao salvar vistoria' });
   }
 });
 
@@ -507,7 +529,7 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
     res.json(rows[0]);
   } catch (err) {
     console.error('[ERRO] PATCH /api/vistorias/:id/editar:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erro ao salvar alteração' });
   }
 });
 
