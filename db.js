@@ -1,5 +1,6 @@
 'use strict';
 const { Pool } = require('pg');
+const bcrypt   = require('bcryptjs');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -58,7 +59,6 @@ async function initSchema() {
       );
 
       -- Vistorias
-      -- cavalo e carreta podem pertencer a empresas/ANTTs diferentes
       CREATE TABLE IF NOT EXISTS vistorias (
         id               SERIAL PRIMARY KEY,
         form_type        VARCHAR(20)  NOT NULL,
@@ -68,17 +68,14 @@ async function initSchema() {
         motorista_id     INTEGER      REFERENCES motoristas(id) ON DELETE SET NULL,
         motorista_nome   VARCHAR(255),
         cpf              VARCHAR(14),
-        -- cavalo
         veiculo_id       INTEGER      REFERENCES veiculos(id)  ON DELETE SET NULL,
         placa_veiculo    VARCHAR(20),
         antt_veiculo     VARCHAR(20),
         empresa_veiculo  VARCHAR(255),
-        -- carreta (pode ser de outro ANTT/CNPJ)
         carreta_id       INTEGER      REFERENCES carretas(id)  ON DELETE SET NULL,
         placa_carreta    VARCHAR(20),
         antt_carreta     VARCHAR(20),
         empresa_carreta  VARCHAR(255),
-        -- dados da carga
         local_coleta     VARCHAR(255),
         destino          VARCHAR(255),
         num_container    VARCHAR(50),
@@ -87,19 +84,41 @@ async function initSchema() {
         lacre_armador    VARCHAR(100),
         lacre_mc         VARCHAR(100),
         lacre_exportador VARCHAR(100),
-        -- inspeção
         stops            JSONB,
         obs              TEXT,
         data_inspecao    VARCHAR(20),
         hora_inspecao    VARCHAR(10),
         photos_count     INTEGER      DEFAULT 0,
         has_reprovado    BOOLEAN      DEFAULT false,
-        -- workflow
         status           VARCHAR(20)  DEFAULT 'pending',
         approved         BOOLEAN      DEFAULT false,
         obs_gestor       TEXT,
         relatorio_base   VARCHAR(255),
         datetime         TIMESTAMPTZ  DEFAULT NOW(),
+        created_at       TIMESTAMPTZ  DEFAULT NOW()
+      );
+
+      -- Usuários do sistema (gestores e motoristas)
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id           SERIAL PRIMARY KEY,
+        nome         VARCHAR(255) NOT NULL,
+        login        VARCHAR(100) NOT NULL UNIQUE,
+        senha_hash   VARCHAR(255) NOT NULL,
+        tipo         VARCHAR(20)  NOT NULL DEFAULT 'motorista',
+        motorista_id INTEGER      REFERENCES motoristas(id) ON DELETE SET NULL,
+        ativo        BOOLEAN      DEFAULT true,
+        created_at   TIMESTAMPTZ  DEFAULT NOW()
+      );
+
+      -- Histórico de alterações feitas pelo gestor nas vistorias
+      CREATE TABLE IF NOT EXISTS vistoria_alteracoes (
+        id               SERIAL PRIMARY KEY,
+        vistoria_id      INTEGER      REFERENCES vistorias(id) ON DELETE CASCADE,
+        gestor_id        INTEGER      REFERENCES usuarios(id)  ON DELETE SET NULL,
+        gestor_nome      VARCHAR(255),
+        motivo           TEXT         NOT NULL,
+        dados_anteriores JSONB,
+        dados_novos      JSONB,
         created_at       TIMESTAMPTZ  DEFAULT NOW()
       );
     `);
@@ -120,8 +139,6 @@ async function initSchema() {
       ON CONFLICT (cnpj) DO NOTHING;
     `);
 
-    // ── Seed veículos (cavalos) ───────────────────────────────────────
-    // empresa_id resolvido por subquery para ser idempotente
     await client.query(`
       INSERT INTO veiculos (placa, modelo, empresa_id) VALUES
         ('ABC-1D23', 'Scania R450',           (SELECT id FROM empresas WHERE cnpj='19.326.067/0001-49')),
@@ -134,7 +151,6 @@ async function initSchema() {
       ON CONFLICT (placa) DO NOTHING;
     `);
 
-    // ── Seed carretas ─────────────────────────────────────────────────
     await client.query(`
       INSERT INTO carretas (placa, modelo, empresa_id) VALUES
         ('XYZ-9K12', 'Randon SR BA',          (SELECT id FROM empresas WHERE cnpj='19.326.067/0001-49')),
@@ -147,7 +163,6 @@ async function initSchema() {
       ON CONFLICT (placa) DO NOTHING;
     `);
 
-    // ── Seed motoristas ───────────────────────────────────────────────
     await client.query(`
       INSERT INTO motoristas (nome, cpf, cnh, cnh_cat, tel, admissao, empresa_id, veiculo_texto, status) VALUES
         ('Carlos Silva',   '123.456.789-00', '12345678', 'E', '(11) 99001-1234', '2021-03-15',
@@ -162,6 +177,30 @@ async function initSchema() {
          (SELECT id FROM empresas WHERE cnpj='45.872.163/0001-55'), 'PQR-5S67 — DAF XF 480', 'Disponível')
       ON CONFLICT (cpf) DO NOTHING;
     `);
+
+    // ── Seed usuários ─────────────────────────────────────────────────
+    // Gestor padrão: admin / mc@2024
+    const hashGestor = await bcrypt.hash('mc@2024', 10);
+    await client.query(`
+      INSERT INTO usuarios (nome, login, senha_hash, tipo, motorista_id)
+      VALUES ('Administrador', 'admin', $1, 'gestor', NULL)
+      ON CONFLICT (login) DO NOTHING
+    `, [hashGestor]);
+
+    // Usuário para cada motorista: login = CPF sem formatação, senha = 1234
+    const hash1234 = await bcrypt.hash('1234', 10);
+    await client.query(`
+      INSERT INTO usuarios (nome, login, senha_hash, tipo, motorista_id)
+      SELECT m.nome,
+             REGEXP_REPLACE(m.cpf, '[^0-9]', '', 'g'),
+             $1,
+             'motorista',
+             m.id
+      FROM motoristas m
+      WHERE NOT EXISTS (
+        SELECT 1 FROM usuarios u WHERE u.motorista_id = m.id
+      )
+    `, [hash1234]);
 
     console.log('[DB] Schema e seed inicializados com sucesso.');
   } finally {

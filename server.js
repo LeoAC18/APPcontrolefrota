@@ -3,44 +3,114 @@ require('dotenv').config();
 const express    = require('express');
 const path       = require('path');
 const fs         = require('fs');
+const bcrypt     = require('bcryptjs');
+const jwt        = require('jsonwebtoken');
 const { gerarWord } = require('./gerarRelatorio');
 const { gerarPdf }  = require('./gerarRelatorioPdf');
 const { pool, initSchema } = require('./db');
 const DB_READY = !!process.env.DATABASE_URL;
+
+const JWT_SECRET = process.env.JWT_SECRET || 'mc-frota-secret-2024';
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '20mb' }));
 
-// CORS — permite que o app Capacitor (origem diferente) acesse a API
+// CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// App mobile (Capacitor) — servido na raiz
+const RELAT_DIR = path.join(__dirname, 'relatorios');
+if (!fs.existsSync(RELAT_DIR)) fs.mkdirSync(RELAT_DIR);
+
+// Arquivos estáticos — sem autenticação
 app.use(express.static(path.join(__dirname, 'www')));
-// Arquivos do projeto raiz (logo, gestor/)
 app.use(express.static(path.join(__dirname)));
-app.use('/relatorios', express.static(path.join(__dirname, 'relatorios')));
+app.use('/relatorios', express.static(RELAT_DIR));
 
 // Rota explícita para o painel do gestor
 app.get('/gestor', (_req, res) => {
   res.sendFile(path.join(__dirname, 'gestor', 'index.html'));
 });
 
-const RELAT_DIR = path.join(__dirname, 'relatorios');
-if (!fs.existsSync(RELAT_DIR)) fs.mkdirSync(RELAT_DIR);
-
 /* helper: executa query só se banco estiver pronto */
 async function dbQuery(sql, params = []) {
   if (!DB_READY) return { rows: [] };
   return pool.query(sql, params);
 }
+
+/* ─────────────────────────────────────────
+   AUTH MIDDLEWARE
+───────────────────────────────────────── */
+function verifyToken(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Não autenticado' });
+  }
+  try {
+    req.user = jwt.verify(auth.slice(7), JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token inválido ou expirado' });
+  }
+}
+
+function requireGestor(req, res, next) {
+  if (req.user?.tipo !== 'gestor') {
+    return res.status(403).json({ error: 'Acesso restrito ao gestor' });
+  }
+  next();
+}
+
+/* ─────────────────────────────────────────
+   AUTH
+───────────────────────────────────────── */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { login, senha } = req.body;
+    if (!login || !senha) return res.status(400).json({ error: 'Login e senha obrigatórios' });
+
+    const { rows } = await dbQuery(`
+      SELECT u.*, m.nome AS motorista_nome, m.cpf AS motorista_cpf
+      FROM usuarios u
+      LEFT JOIN motoristas m ON m.id = u.motorista_id
+      WHERE u.login = $1 AND u.ativo = true
+    `, [login.trim()]);
+
+    if (!rows.length) return res.status(401).json({ error: 'Credenciais inválidas' });
+    const user = rows[0];
+
+    const ok = await bcrypt.compare(senha, user.senha_hash);
+    if (!ok) return res.status(401).json({ error: 'Credenciais inválidas' });
+
+    const payload = {
+      id:           user.id,
+      nome:         user.nome,
+      tipo:         user.tipo,
+      motorista_id: user.motorista_id,
+    };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '10h' });
+
+    res.json({
+      token,
+      nome:         user.nome,
+      tipo:         user.tipo,
+      motorista_id: user.motorista_id,
+      motorista_cpf: user.motorista_cpf || null,
+    });
+  } catch (err) {
+    console.error('[AUTH] login:', err.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.get('/api/auth/me', verifyToken, (req, res) => res.json(req.user));
 
 /* ─────────────────────────────────────────
    STATUS
@@ -59,12 +129,12 @@ app.get('/api/status', async (_req, res) => {
 /* ─────────────────────────────────────────
    EMPRESAS
 ───────────────────────────────────────── */
-app.get('/api/empresas', async (_req, res) => {
+app.get('/api/empresas', verifyToken, async (_req, res) => {
   const { rows } = await dbQuery('SELECT * FROM empresas WHERE ativa = true ORDER BY nome');
   res.json(rows);
 });
 
-app.post('/api/empresas', async (req, res) => {
+app.post('/api/empresas', verifyToken, requireGestor, async (req, res) => {
   const { nome, cnpj, antt } = req.body;
   const { rows } = await dbQuery(
     'INSERT INTO empresas (nome, cnpj, antt) VALUES ($1, $2, $3) RETURNING *',
@@ -73,7 +143,7 @@ app.post('/api/empresas', async (req, res) => {
   res.json(rows[0]);
 });
 
-app.put('/api/empresas/:id', async (req, res) => {
+app.put('/api/empresas/:id', verifyToken, requireGestor, async (req, res) => {
   const { nome, cnpj, antt, ativa } = req.body;
   const { rows } = await dbQuery(
     'UPDATE empresas SET nome=$1, cnpj=$2, antt=$3, ativa=$4 WHERE id=$5 RETURNING *',
@@ -84,9 +154,9 @@ app.put('/api/empresas/:id', async (req, res) => {
 });
 
 /* ─────────────────────────────────────────
-   VEÍCULOS (cavalos)
+   VEÍCULOS
 ───────────────────────────────────────── */
-app.get('/api/veiculos', async (_req, res) => {
+app.get('/api/veiculos', verifyToken, async (_req, res) => {
   const { rows } = await dbQuery(`
     SELECT v.*, e.nome AS empresa_nome, e.cnpj, e.antt
     FROM veiculos v
@@ -97,7 +167,7 @@ app.get('/api/veiculos', async (_req, res) => {
   res.json(rows);
 });
 
-app.post('/api/veiculos', async (req, res) => {
+app.post('/api/veiculos', verifyToken, requireGestor, async (req, res) => {
   const { placa, modelo, empresa_id } = req.body;
   const { rows } = await dbQuery(
     'INSERT INTO veiculos (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
@@ -106,7 +176,7 @@ app.post('/api/veiculos', async (req, res) => {
   res.json(rows[0]);
 });
 
-app.put('/api/veiculos/:id', async (req, res) => {
+app.put('/api/veiculos/:id', verifyToken, requireGestor, async (req, res) => {
   const { placa, modelo, empresa_id, ativo } = req.body;
   const { rows } = await dbQuery(
     'UPDATE veiculos SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
@@ -119,7 +189,7 @@ app.put('/api/veiculos/:id', async (req, res) => {
 /* ─────────────────────────────────────────
    CARRETAS
 ───────────────────────────────────────── */
-app.get('/api/carretas', async (_req, res) => {
+app.get('/api/carretas', verifyToken, async (_req, res) => {
   const { rows } = await dbQuery(`
     SELECT c.*, e.nome AS empresa_nome, e.cnpj, e.antt
     FROM carretas c
@@ -130,7 +200,7 @@ app.get('/api/carretas', async (_req, res) => {
   res.json(rows);
 });
 
-app.post('/api/carretas', async (req, res) => {
+app.post('/api/carretas', verifyToken, requireGestor, async (req, res) => {
   const { placa, modelo, empresa_id } = req.body;
   const { rows } = await dbQuery(
     'INSERT INTO carretas (placa, modelo, empresa_id) VALUES ($1, $2, $3) RETURNING *',
@@ -139,7 +209,7 @@ app.post('/api/carretas', async (req, res) => {
   res.json(rows[0]);
 });
 
-app.put('/api/carretas/:id', async (req, res) => {
+app.put('/api/carretas/:id', verifyToken, requireGestor, async (req, res) => {
   const { placa, modelo, empresa_id, ativo } = req.body;
   const { rows } = await dbQuery(
     'UPDATE carretas SET placa=$1, modelo=$2, empresa_id=$3, ativo=$4 WHERE id=$5 RETURNING *',
@@ -152,15 +222,13 @@ app.put('/api/carretas/:id', async (req, res) => {
 /* ─────────────────────────────────────────
    MOTORISTAS
 ───────────────────────────────────────── */
-app.get('/api/motoristas', async (_req, res) => {
+app.get('/api/motoristas', verifyToken, async (_req, res) => {
   const { rows } = await dbQuery(`
-    SELECT m.*,
-           e.nome AS empresa_nome, e.cnpj, e.antt
+    SELECT m.*, e.nome AS empresa_nome, e.cnpj, e.antt
     FROM motoristas m
     LEFT JOIN empresas e ON e.id = m.empresa_id
     ORDER BY m.nome
   `);
-  // Compatibilidade com o painel: campo "vistorias" e "cnhCat"
   res.json(rows.map(r => ({
     ...r,
     vistorias: r.vistorias_count,
@@ -169,7 +237,7 @@ app.get('/api/motoristas', async (_req, res) => {
   })));
 });
 
-app.post('/api/motoristas', async (req, res) => {
+app.post('/api/motoristas', verifyToken, requireGestor, async (req, res) => {
   const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
   const { rows } = await dbQuery(
     `INSERT INTO motoristas (nome, cpf, cnh, cnh_cat, tel, admissao, empresa_id, veiculo_texto, status, obs)
@@ -177,10 +245,21 @@ app.post('/api/motoristas', async (req, res) => {
     [nome, cpf, cnh, cnhCat || 'E', tel, admissao || null, empresa_id || null, veiculo || null, status || 'Disponível', obs || '']
   );
   const m = rows[0];
+
+  // Cria usuário para o novo motorista (login = CPF digits, senha = 1234)
+  try {
+    const hash = await bcrypt.hash('1234', 10);
+    const loginCpf = cpf.replace(/[^0-9]/g, '');
+    await dbQuery(
+      `INSERT INTO usuarios (nome, login, senha_hash, tipo, motorista_id) VALUES ($1,$2,$3,'motorista',$4) ON CONFLICT (login) DO NOTHING`,
+      [nome, loginCpf, hash, m.id]
+    );
+  } catch (_) {}
+
   res.json({ ...m, vistorias: m.vistorias_count, cnhCat: m.cnh_cat, veiculo: m.veiculo_texto });
 });
 
-app.put('/api/motoristas/:id', async (req, res) => {
+app.put('/api/motoristas/:id', verifyToken, requireGestor, async (req, res) => {
   const { nome, cpf, cnh, cnhCat, tel, admissao, empresa_id, veiculo, status, obs } = req.body;
   const { rows } = await dbQuery(
     `UPDATE motoristas SET nome=$1, cpf=$2, cnh=$3, cnh_cat=$4, tel=$5, admissao=$6,
@@ -192,7 +271,7 @@ app.put('/api/motoristas/:id', async (req, res) => {
   res.json({ ...m, vistorias: m.vistorias_count, cnhCat: m.cnh_cat, veiculo: m.veiculo_texto });
 });
 
-app.delete('/api/motoristas/:id', async (req, res) => {
+app.delete('/api/motoristas/:id', verifyToken, requireGestor, async (req, res) => {
   await dbQuery('DELETE FROM motoristas WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
@@ -200,19 +279,8 @@ app.delete('/api/motoristas/:id', async (req, res) => {
 /* ─────────────────────────────────────────
    VISTORIAS
 ───────────────────────────────────────── */
-app.get('/api/vistorias', async (_req, res) => {
-  const { rows } = await dbQuery(`
-    SELECT v.*,
-           ev.nome AS empresa_veiculo_nome,
-           ec.nome AS empresa_carreta_nome
-    FROM vistorias v
-    LEFT JOIN veiculos vv ON vv.id = v.veiculo_id
-    LEFT JOIN empresas ev ON ev.id = vv.empresa_id
-    LEFT JOIN carretas cc ON cc.id = v.carreta_id
-    LEFT JOIN empresas ec ON ec.id = cc.empresa_id
-    ORDER BY v.datetime DESC
-  `);
-  res.json(rows.map(r => ({
+function formatVistoria(r) {
+  return {
     ...r,
     motorista:    r.motorista_nome,
     placa:        r.placa_veiculo,
@@ -226,15 +294,56 @@ app.get('/api/vistorias', async (_req, res) => {
     pdfUrl:       r.relatorio_base && fs.existsSync(path.join(RELAT_DIR, `${r.relatorio_base}.pdf`))  ? `/relatorios/${r.relatorio_base}.pdf`  : null,
     wordFilename: r.relatorio_base ? `${r.relatorio_base}.docx` : null,
     pdfFilename:  r.relatorio_base ? `${r.relatorio_base}.pdf`  : null,
+  };
+}
+
+// Todas as vistorias — gestor
+app.get('/api/vistorias', verifyToken, requireGestor, async (_req, res) => {
+  const { rows } = await dbQuery(`
+    SELECT v.*,
+           ev.nome AS empresa_veiculo_nome,
+           ec.nome AS empresa_carreta_nome
+    FROM vistorias v
+    LEFT JOIN veiculos vv ON vv.id = v.veiculo_id
+    LEFT JOIN empresas ev ON ev.id = vv.empresa_id
+    LEFT JOIN carretas cc ON cc.id = v.carreta_id
+    LEFT JOIN empresas ec ON ec.id = cc.empresa_id
+    ORDER BY v.datetime DESC
+  `);
+  res.json(rows.map(formatVistoria));
+});
+
+// Vistorias do motorista logado
+app.get('/api/vistorias/minhas', verifyToken, async (req, res) => {
+  if (!req.user.motorista_id) return res.status(403).json({ error: 'Não é motorista' });
+  const { rows } = await dbQuery(`
+    SELECT v.* FROM vistorias v
+    WHERE v.motorista_id = $1
+    ORDER BY v.datetime DESC
+    LIMIT 50
+  `, [req.user.motorista_id]);
+  res.json(rows.map(r => ({
+    ...r,
+    wordUrl:  r.relatorio_base && fs.existsSync(path.join(RELAT_DIR, `${r.relatorio_base}.docx`)) ? `/relatorios/${r.relatorio_base}.docx` : null,
+    pdfUrl:   r.relatorio_base && fs.existsSync(path.join(RELAT_DIR, `${r.relatorio_base}.pdf`))  ? `/relatorios/${r.relatorio_base}.pdf`  : null,
   })));
 });
 
-app.post('/api/vistorias', async (req, res) => {
+// Histórico de alterações de uma vistoria — gestor
+app.get('/api/vistorias/:id/alteracoes', verifyToken, requireGestor, async (req, res) => {
+  const { rows } = await dbQuery(
+    'SELECT * FROM vistoria_alteracoes WHERE vistoria_id=$1 ORDER BY created_at DESC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+// Criar vistoria — motorista
+app.post('/api/vistorias', verifyToken, async (req, res) => {
   try {
     const d = req.body;
     if (!d || !d.formType) return res.status(400).json({ ok: false, error: 'Dados inválidos' });
 
-    // Resolve veiculo_id e antt a partir da placa, se existir no banco
     let veiculoId = null, anttVeiculo = null, empresaVeiculo = null;
     if (d.placaVeiculo) {
       const vq = await dbQuery(`
@@ -248,7 +357,6 @@ app.post('/api/vistorias', async (req, res) => {
       }
     }
 
-    // Resolve carreta_id e antt (pode ser empresa diferente)
     let carretaId = null, anttCarreta = null, empresaCarreta = null;
     if (d.placaCarreta) {
       const cq = await dbQuery(`
@@ -262,15 +370,14 @@ app.post('/api/vistorias', async (req, res) => {
       }
     }
 
-    // Resolve motorista_id
-    let motoristaBd = null;
-    if (d.motorista) {
+    // Usa motorista_id do token se disponível, senão resolve pelo nome
+    let motoristaBd = req.user?.motorista_id || null;
+    if (!motoristaBd && d.motorista) {
       const mq = await dbQuery(
         'SELECT id FROM motoristas WHERE LOWER(nome) = LOWER($1) LIMIT 1', [d.motorista]);
       if (mq.rows.length) motoristaBd = mq.rows[0].id;
     }
 
-    // Gera nome do arquivo antes do INSERT para salvar no banco
     const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
     const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
@@ -302,7 +409,6 @@ app.post('/api/vistorias', async (req, res) => {
       ]
     );
 
-    // Incrementa contador do motorista
     if (motoristaBd) {
       await dbQuery(
         'UPDATE motoristas SET vistorias_count = vistorias_count + 1 WHERE id = $1',
@@ -310,20 +416,16 @@ app.post('/api/vistorias', async (req, res) => {
       );
     }
 
-    // Preenche paradas faltantes com "pulada" para relatório de 4 colunas
     const stopsForReport = d.stops ? [...d.stops].slice(0, 4) : [];
     while (stopsForReport.length < 4) {
       stopsForReport.push({ motivo: '', local: '', items: {}, comentarios: '', pulada: true });
     }
-
     const vistoriaData = { ...d, stops: stopsForReport };
 
-    // Gera Word (.docx)
     const docxPath = path.join(RELAT_DIR, `${base}.docx`);
     const wordBuf  = await gerarWord(vistoriaData);
     fs.writeFileSync(docxPath, wordBuf);
 
-    // Gera PDF diretamente via pdfkit (sem LibreOffice)
     let pdfOk = false;
     try {
       const pdfPath = path.join(RELAT_DIR, `${base}.pdf`);
@@ -336,7 +438,7 @@ app.post('/api/vistorias', async (req, res) => {
     }
 
     const savedId = (rows && rows.length) ? rows[0].id : null;
-    console.log(`[VISTORIA] Salva no banco: id=${savedId} motorista="${d.motorista}" tipo=${d.formType}`);
+    console.log(`[VISTORIA] Salva: id=${savedId} motorista="${d.motorista}" tipo=${d.formType}`);
     res.json({
       ok: true,
       id:           savedId,
@@ -351,7 +453,8 @@ app.post('/api/vistorias', async (req, res) => {
   }
 });
 
-app.patch('/api/vistorias/:id/status', async (req, res) => {
+// Aprovar / reprovar — gestor
+app.patch('/api/vistorias/:id/status', verifyToken, requireGestor, async (req, res) => {
   const { status, obs } = req.body;
   const { rows } = await dbQuery(
     `UPDATE vistorias SET status=$1, approved=$2, obs_gestor=COALESCE($3, obs_gestor)
@@ -360,6 +463,52 @@ app.patch('/api/vistorias/:id/status', async (req, res) => {
   );
   if (!rows.length) return res.status(404).json({ error: 'Não encontrado' });
   res.json(rows[0]);
+});
+
+// Editar vistoria com motivo obrigatório — gestor
+app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, res) => {
+  try {
+    const { motivo, ...changes } = req.body;
+    if (!motivo || !motivo.trim()) {
+      return res.status(400).json({ error: 'Motivo da alteração é obrigatório' });
+    }
+
+    const curr = await dbQuery('SELECT * FROM vistorias WHERE id=$1', [req.params.id]);
+    if (!curr.rows.length) return res.status(404).json({ error: 'Vistoria não encontrada' });
+    const antes = curr.rows[0];
+
+    // Campos que o gestor pode editar
+    const camposPermitidos = ['obs_gestor', 'status', 'obs', 'processo', 'responsavel',
+                              'local_coleta', 'destino', 'lacre_armador', 'lacre_mc', 'lacre_exportador'];
+    const updates = Object.entries(changes).filter(([k]) => camposPermitidos.includes(k));
+    if (!updates.length) return res.status(400).json({ error: 'Nenhum campo válido para alterar' });
+
+    const setClauses = updates.map(([k], i) => `${k}=$${i + 1}`).join(', ');
+    const valores    = updates.map(([, v]) => v);
+    valores.push(req.params.id);
+
+    const { rows } = await dbQuery(
+      `UPDATE vistorias SET ${setClauses} WHERE id=$${valores.length} RETURNING *`,
+      valores
+    );
+
+    // Registra o histórico da alteração
+    const dadosAnt = {}, dadosNov = {};
+    updates.forEach(([k, v]) => { dadosAnt[k] = antes[k]; dadosNov[k] = v; });
+
+    await dbQuery(
+      `INSERT INTO vistoria_alteracoes (vistoria_id, gestor_id, gestor_nome, motivo, dados_anteriores, dados_novos)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [req.params.id, req.user.id, req.user.nome, motivo.trim(),
+       JSON.stringify(dadosAnt), JSON.stringify(dadosNov)]
+    );
+
+    console.log(`[EDITAR] Vistoria ${req.params.id} alterada por ${req.user.nome} — motivo: ${motivo.trim()}`);
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('[ERRO] PATCH /api/vistorias/:id/editar:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* ─────────────────────────────────────────

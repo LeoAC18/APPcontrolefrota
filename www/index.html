@@ -386,28 +386,88 @@
     .mt-12 { margin-top: 12px; }
     .text-muted { color: var(--gray-500); font-size: 13px; }
 
-    /* MANAGER */
-    .manager-banner {
-      background: var(--warning-light); border-bottom: 1px solid #fde68a;
-      padding: 8px 20px; font-size: 12px; font-weight: 600; color: #92400e;
+    /* LOGIN */
+    .login-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 32px 24px;
+      background: linear-gradient(160deg, var(--primary-dark) 0%, var(--primary) 60%);
     }
+    .login-logo {
+      background: #fff; border-radius: 16px; padding: 10px 18px;
+      margin-bottom: 28px; display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: #fff; border-radius: 18px; padding: 28px 24px;
+      width: 100%; max-width: 360px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    }
+    .login-title { font-size: 22px; font-weight: 800; color: var(--gray-900); margin-bottom: 4px; }
+    .login-sub   { font-size: 14px; color: var(--gray-500); margin-bottom: 24px; }
+    .login-error {
+      background: var(--danger-light); color: var(--danger); border-radius: 8px;
+      padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none;
+    }
+    .btn-login {
+      width: 100%; background: var(--primary); color: #fff;
+      border: none; border-radius: var(--radius); padding: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(26,86,219,.35); margin-top: 6px;
+      transition: background .15s;
+    }
+    .btn-login:active { background: var(--primary-dark); }
+    .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+    .login-hint { margin-top: 16px; font-size: 12px; color: var(--gray-400); text-align: center; }
   </style>
 </head>
 <body>
 
 <!-- ══════════════════════════════════════
+     TELA: LOGIN
+══════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-screen">
+    <div class="login-logo">
+      <img src="logomctransportes.png" style="height:36px;width:auto;object-fit:contain" alt="MC Transportes" />
+    </div>
+    <div class="login-card">
+      <div class="login-title">Acesso ao Sistema</div>
+      <div class="login-sub">MC Transportes — Vistoria de Frota</div>
+      <div class="login-error" id="login-error"></div>
+      <div class="form-group">
+        <label class="form-label">CPF (somente números)</label>
+        <input class="form-input" id="login-cpf" type="text" inputmode="numeric"
+               placeholder="00000000000" maxlength="11" autocomplete="username"
+               onkeydown="if(event.key==='Enter') document.getElementById('login-pin').focus()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha / PIN</label>
+        <input class="form-input" id="login-pin" type="password" inputmode="numeric"
+               placeholder="••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()" />
+      </div>
+      <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="login-hint">Primeiro acesso: use seu CPF (só números) e senha <strong>1234</strong></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
      TELA: HOME
 ══════════════════════════════════════ -->
-<div id="screen-home" class="screen active">
+<div id="screen-home" class="screen">
   <div class="home-hero">
     <div class="header-top">
       <div class="header-logo">
         <img src="logomctransportes.png" style="height:28px;width:auto;object-fit:contain;background:#fff;border-radius:5px;padding:2px 6px" alt="MC Transportes" />
       </div>
-      <span class="header-date" id="home-date"></span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="header-date" id="home-date"></span>
+        <button onclick="doLogout()" style="background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer">Sair</button>
+      </div>
     </div>
     <div style="height:12px"></div>
-    <div style="font-size:22px;font-weight:800;margin-bottom:4px">Olá, Motorista 👋</div>
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px">Olá, <span id="home-nome-motorista">Motorista</span> 👋</div>
     <div style="font-size:14px;opacity:.8">Selecione o tipo de vistoria para começar.</div>
   </div>
 
@@ -479,7 +539,6 @@
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
     <button class="nav-item" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
-    <button class="nav-item" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
   </nav>
 </div>
 
@@ -568,40 +627,6 @@
   <nav class="bottom-nav">
     <button class="nav-item" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
     <button class="nav-item active" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
-    <button class="nav-item" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
-  </nav>
-</div>
-
-
-<!-- ══════════════════════════════════════
-     TELA: GESTOR
-══════════════════════════════════════ -->
-<div id="screen-manager" class="screen">
-  <div class="header">
-    <div class="header-top">
-      <div class="header-logo">📊 Painel do Gestor</div>
-      <button class="btn-back" onclick="goTo('home')">← Início</button>
-    </div>
-  </div>
-  <div class="manager-banner">🔒 Área restrita — acesso do gestor/empresa</div>
-  <div class="history-content has-bottom-nav">
-    <div class="status-row" style="margin-bottom:16px">
-      <div class="status-item">
-        <div class="s-label">Total de vistorias</div>
-        <div class="s-value" id="mgr-total">0</div>
-      </div>
-      <div class="status-item">
-        <div class="s-label">Com reprovação</div>
-        <div class="s-value" style="color:var(--warning)" id="mgr-reprovadas">0</div>
-      </div>
-    </div>
-    <div class="section-title">Todas as vistorias</div>
-    <div id="manager-list"><div class="empty-recent">Nenhuma vistoria registrada ainda.</div></div>
-  </div>
-  <nav class="bottom-nav">
-    <button class="nav-item" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
-    <button class="nav-item" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
-    <button class="nav-item active" onclick="goTo('manager')"><span class="nav-icon">📊</span>Gestor</button>
   </nav>
 </div>
 
@@ -675,6 +700,80 @@ const FORMS_CONFIG = {
 };
 
 /* ═══════════════════════════════════════
+   AUTH
+═══════════════════════════════════════ */
+let currentUser = null;
+
+function authHeader() {
+  const token = localStorage.getItem('mc_auth');
+  return token ? { 'Authorization': 'Bearer ' + token } : {};
+}
+
+async function doLogin() {
+  const cpf   = document.getElementById('login-cpf').value.replace(/\D/g, '').trim();
+  const senha = document.getElementById('login-pin').value.trim();
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+
+  errEl.style.display = 'none';
+  if (!cpf || !senha) { errEl.textContent = 'Preencha CPF e senha.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    const base = window.SERVER_URL || '';
+    const res  = await fetch(`${base}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: cpf, senha }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao autenticar');
+    if (data.tipo !== 'motorista') throw new Error('Use o painel do gestor para acessar com essa conta.');
+
+    localStorage.setItem('mc_auth', data.token);
+    currentUser = data;
+    await afterLogin();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+async function afterLogin() {
+  await loadDbData();
+  document.getElementById('home-nome-motorista').textContent =
+    (currentUser.nome || 'Motorista').split(' ')[0];
+  goTo('home');
+}
+
+function doLogout() {
+  localStorage.removeItem('mc_auth');
+  currentUser = null;
+  goTo('login');
+}
+
+async function checkAuth() {
+  const token = localStorage.getItem('mc_auth');
+  if (!token) { goTo('login'); return false; }
+  try {
+    const base = window.SERVER_URL || '';
+    const res  = await fetch(`${base}/api/auth/me`, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) throw new Error();
+    currentUser = await res.json();
+    if (currentUser.tipo !== 'motorista') throw new Error('Tipo inválido');
+    return true;
+  } catch {
+    localStorage.removeItem('mc_auth');
+    goTo('login');
+    return false;
+  }
+}
+
+/* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
 let state = {};
@@ -692,10 +791,11 @@ let dbData = { motoristas: [], veiculos: [], carretas: [] };
 async function loadDbData() {
   const base = window.SERVER_URL || '';
   try {
+    const headers = { ...authHeader() };
     const [mRes, vRes, cRes] = await Promise.all([
-      fetch(`${base}/api/motoristas`),
-      fetch(`${base}/api/veiculos`),
-      fetch(`${base}/api/carretas`),
+      fetch(`${base}/api/motoristas`, { headers }),
+      fetch(`${base}/api/veiculos`,   { headers }),
+      fetch(`${base}/api/carretas`,   { headers }),
     ]);
     if (mRes.ok) dbData.motoristas = await mRes.json();
     if (vRes.ok) dbData.veiculos   = await vRes.json();
@@ -745,19 +845,24 @@ function goTo(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screenId).classList.add('active');
   window.scrollTo(0, 0);
-  // FAB de fotos: visível apenas no formulário
   const fab = document.getElementById('photo-fab');
   if (fab) fab.style.display = screenId === 'form' ? '' : 'none';
-  if (screenId === 'home') renderHome();
+  if (screenId === 'home')    renderHome();
   if (screenId === 'history') renderHistory();
-  if (screenId === 'manager') renderManager();
 }
 
 function startForm(type) {
-  if (activeTrip) return; // já há viagem em andamento — home mostra as opções
+  if (activeTrip) return;
+  // Pré-preenche motorista a partir do usuário logado
+  const mLogado = currentUser?.motorista_id
+    ? dbData.motoristas.find(m => m.id === currentUser.motorista_id)
+    : null;
   state = {
     formType: type,
-    processo: '', responsavel: '', motorista: '', cpf: '',
+    processo: '', responsavel: '',
+    motorista:    mLogado ? mLogado.nome : '',
+    cpf:          mLogado ? mLogado.cpf  : '',
+    _motoristaId: mLogado ? mLogado.id   : null,
     placaVeiculo: '', placaCarreta: '', localColeta: '', destino: '',
     numContainer: '', tara: '', maxGross: '',
     lacreArmador: '', lacreMC: '', lacreExportador: '',
@@ -1522,7 +1627,7 @@ function submitForm() {
 
   fetch(base + '/api/vistorias', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(vistoria)
   })
   .then(r => r.json())
@@ -1619,104 +1724,73 @@ function renderHome() {
 /* ═══════════════════════════════════════
    HISTÓRICO
 ═══════════════════════════════════════ */
-function renderHistory() {
+async function renderHistory() {
   const c = document.getElementById('history-list');
-  if (!vistorias.length) {
-    c.innerHTML = '<div class="empty-recent" style="margin-top:40px">Nenhuma vistoria registrada ainda.</div>';
-    return;
-  }
-  c.innerHTML = [...vistorias].reverse().map((v, i) => {
-    const dt = new Date(v.datetime);
-    const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const stops = v.stops.filter(s => !s.pulada);
-    const reprovados = stops.reduce((acc, s) => {
-      const reps = Object.values(s.items).filter(x => x === 'R').length;
-      return acc + reps;
-    }, 0);
+  c.innerHTML = '<div class="empty-recent" style="margin-top:40px">⏳ Carregando histórico...</div>';
+  try {
+    const base = window.SERVER_URL || '';
+    const res  = await fetch(`${base}/api/vistorias/minhas`, { headers: authHeader() });
+    if (!res.ok) throw new Error('Erro ' + res.status);
+    const lista = await res.json();
 
-    return `
-      <div class="history-item">
-        <div class="history-item-header" onclick="toggleHist('h${i}')">
-          <div class="history-status-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
-          <div class="history-item-info">
-            <div class="history-item-title">${v.motorista} · ${v.placaVeiculo}</div>
-            <div class="history-item-sub">${v.formCodigo} · ${v.localColeta} → ${v.destino}</div>
+    if (!lista.length) {
+      c.innerHTML = '<div class="empty-recent" style="margin-top:40px">Nenhuma vistoria registrada ainda.</div>';
+      return;
+    }
+
+    c.innerHTML = lista.map((v, i) => {
+      const dt      = new Date(v.datetime);
+      const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const stops   = Array.isArray(v.stops) ? v.stops.filter(s => !s.pulada) : [];
+      const reprovados = stops.reduce((acc, s) => acc + Object.values(s.items || {}).filter(x => x === 'R').length, 0);
+      const statusBadge = v.status === 'approved'
+        ? '<span class="badge ok">✅ Aprovada pelo gestor</span>'
+        : v.status === 'rejected'
+          ? '<span class="badge warn">❌ Reprovada pelo gestor</span>'
+          : '<span class="badge" style="background:var(--gray-100);color:var(--gray-500)">⏳ Aguardando revisão</span>';
+
+      const downloadLinks = v.pdfUrl
+        ? `<a href="${v.pdfUrl}" target="_blank" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none">📄 Baixar PDF</a>`
+        : v.wordUrl
+          ? `<a href="${v.wordUrl}" target="_blank" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none">📝 Baixar Word</a>`
+          : '';
+
+      return `
+        <div class="history-item">
+          <div class="history-item-header" onclick="toggleHist('h${i}')">
+            <div class="history-status-dot ${v.has_reprovado ? 'warn' : 'ok'}"></div>
+            <div class="history-item-info">
+              <div class="history-item-title">${escHtml(v.motorista_nome || '')} · ${escHtml(v.placa_veiculo || '')}</div>
+              <div class="history-item-sub">${escHtml(v.form_codigo || v.form_type || '')} · ${escHtml(v.local_coleta || '')} → ${escHtml(v.destino || '')}</div>
+            </div>
+            <div class="history-item-time">${dateStr}</div>
           </div>
-          <div class="history-item-time">${dateStr}</div>
-        </div>
-        <div class="history-item-body" id="h${i}">
-          <div class="history-field"><span class="hk">Responsável</span><span class="hv">${v.responsavel}</span></div>
-          <div class="history-field"><span class="hk">CPF Motorista</span><span class="hv">${v.cpf}</span></div>
-          ${v.numContainer ? `<div class="history-field"><span class="hk">N° Container</span><span class="hv">${v.numContainer}</span></div>` : ''}
-          ${v.lacreArmador ? `<div class="history-field"><span class="hk">Lacres</span><span class="hv">Armador: ${v.lacreArmador} · MC: ${v.lacreMC} · Exportador: ${v.lacreExportador}</span></div>` : ''}
-          <div class="history-field"><span class="hk">Paradas inspecionadas</span><span class="hv">${stops.length} parada(s)</span></div>
-          <div class="history-field"><span class="hk">Itens reprovados</span><span class="hv" style="color:${reprovados > 0 ? 'var(--danger)' : 'inherit'}">${reprovados > 0 ? reprovados + ' item(ns) reprovado(s)' : 'Nenhum'}</span></div>
-          ${v.photos > 0 ? `<div class="history-field"><span class="hk">Fotos</span><span class="hv">${v.photos} foto(s)</span></div>` : ''}
-          ${v.obs ? `<div class="history-field"><span class="hk">Obs.</span><span class="hv">${v.obs}</span></div>` : ''}
-          <div class="mt-12">
-            <span class="badge ${v.hasReprovado ? 'warn' : 'ok'}">${v.hasReprovado ? '⚠️ Itens Reprovados' : '✅ Tudo Aprovado'}</span>
+          <div class="history-item-body" id="h${i}">
+            <div class="history-field"><span class="hk">Responsável</span><span class="hv">${escHtml(v.responsavel || '—')}</span></div>
+            <div class="history-field"><span class="hk">CPF Motorista</span><span class="hv">${escHtml(v.cpf || '—')}</span></div>
+            ${v.num_container ? `<div class="history-field"><span class="hk">N° Container</span><span class="hv">${escHtml(v.num_container)}</span></div>` : ''}
+            ${v.lacre_armador ? `<div class="history-field"><span class="hk">Lacres</span><span class="hv">Armador: ${escHtml(v.lacre_armador)} · MC: ${escHtml(v.lacre_mc||'')} · Exportador: ${escHtml(v.lacre_exportador||'')}</span></div>` : ''}
+            <div class="history-field"><span class="hk">Paradas</span><span class="hv">${stops.length} parada(s)</span></div>
+            <div class="history-field"><span class="hk">Itens reprovados</span><span class="hv" style="color:${reprovados > 0 ? 'var(--danger)' : 'inherit'}">${reprovados > 0 ? reprovados + ' item(ns) reprovado(s)' : 'Nenhum'}</span></div>
+            ${v.obs ? `<div class="history-field"><span class="hk">Obs. motorista</span><span class="hv">${escHtml(v.obs)}</span></div>` : ''}
+            ${v.obs_gestor ? `<div class="history-field"><span class="hk">Obs. gestor</span><span class="hv" style="color:var(--primary)">${escHtml(v.obs_gestor)}</span></div>` : ''}
+            <div class="mt-12" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              ${statusBadge}
+              <span class="badge ${v.has_reprovado ? 'warn' : 'ok'}">${v.has_reprovado ? '⚠️ Itens Reprovados' : '✅ Tudo Aprovado'}</span>
+              ${downloadLinks}
+            </div>
           </div>
         </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  } catch (e) {
+    c.innerHTML = `<div class="empty-recent" style="margin-top:40px;color:var(--danger)">Erro ao carregar histórico: ${e.message}</div>`;
+  }
 }
 
 function toggleHist(id) {
   const b = document.getElementById(id);
   if (b) b.classList.toggle('open');
-}
-
-/* ═══════════════════════════════════════
-   GESTOR
-═══════════════════════════════════════ */
-function renderManager() {
-  document.getElementById('mgr-total').textContent = vistorias.length;
-  document.getElementById('mgr-reprovadas').textContent = vistorias.filter(v => v.hasReprovado).length;
-  const c = document.getElementById('manager-list');
-  if (!vistorias.length) {
-    c.innerHTML = '<div class="empty-recent">Nenhuma vistoria registrada ainda.</div>';
-    return;
-  }
-  c.innerHTML = [...vistorias].reverse().map((v, i) => {
-    const dt = new Date(v.datetime);
-    const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const stops = v.stops.filter(s => !s.pulada);
-    const repItem = [];
-    stops.forEach(s => {
-      Object.entries(s.items).forEach(([pid, val]) => {
-        if (val === 'R') {
-          const ponto = FORMS_CONFIG[v.formType].pontos.find(p => p.id === parseInt(pid));
-          if (ponto) repItem.push(`${s.tipo}: ${ponto.label}`);
-        }
-      });
-    });
-
-    return `
-      <div class="history-item">
-        <div class="history-item-header" onclick="toggleHist('m${i}')">
-          <div class="history-status-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
-          <div class="history-item-info">
-            <div class="history-item-title">${v.motorista} · ${v.placaVeiculo}</div>
-            <div class="history-item-sub">${v.localColeta} → ${v.destino} · ${v.dataInspecao}</div>
-          </div>
-          <div class="history-item-time">${dateStr}</div>
-        </div>
-        <div class="history-item-body" id="m${i}">
-          <div class="history-field"><span class="hk">Formulário</span><span class="hv">${v.formCodigo}</span></div>
-          <div class="history-field"><span class="hk">Processo</span><span class="hv">${v.processo || 'Não informado'}</span></div>
-          <div class="history-field"><span class="hk">CPF</span><span class="hv">${v.cpf}</span></div>
-          ${v.numContainer ? `<div class="history-field"><span class="hk">Container</span><span class="hv">${v.numContainer} · Tara: ${v.tara}kg · MaxGross: ${v.maxGross}kg</span></div>` : ''}
-          ${repItem.length > 0
-            ? `<div class="history-field"><span class="hk" style="color:var(--danger)">⚠️ Itens Reprovados</span><span class="hv" style="color:var(--danger)">${repItem.join('<br>')}</span></div>`
-            : ''}
-          <div class="history-field"><span class="hk">Fotos</span><span class="hv">${v.photos > 0 ? v.photos + ' foto(s)' : 'Nenhuma'}</span></div>
-          ${v.obs ? `<div class="history-field"><span class="hk">Observações</span><span class="hv">${v.obs}</span></div>` : ''}
-          <div class="mt-12"><span class="badge ${v.hasReprovado ? 'warn' : 'ok'}">${v.hasReprovado ? '⚠️ Atenção necessária' : '✅ Saída normal'}</span></div>
-        </div>
-      </div>
-    `;
-  }).join('');
 }
 
 /* ═══════════════════════════════════════
@@ -1744,8 +1818,15 @@ function formatTime(d) {
 }
 
 /* INIT */
-loadDbData().then(() => renderHome());
-renderHome();
+(async () => {
+  const autenticado = await checkAuth();
+  if (autenticado) {
+    document.getElementById('home-nome-motorista').textContent =
+      (currentUser.nome || 'Motorista').split(' ')[0];
+    await loadDbData();
+    renderHome();
+  }
+})();
 </script>
 </body>
 </html>
