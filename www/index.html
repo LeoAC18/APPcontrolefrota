@@ -989,7 +989,7 @@ function renderStepIdent() {
     </div>` : `
     <div class="form-group">
       <label class="form-label">Placa do Veículo <span class="req">*</span></label>
-      <input class="form-input" id="f-placa-veiculo" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+      <input class="form-input" id="f-placa-veiculo" type="text" placeholder="ABC-1234" maxlength="15" style="text-transform:uppercase" />
     </div>`;
 
   const carretaField = carretaOpts ? `
@@ -1004,7 +1004,7 @@ function renderStepIdent() {
     </div>` : `
     <div class="form-group">
       <label class="form-label">Placa da Carreta</label>
-      <input class="form-input" id="f-placa-carreta" type="text" placeholder="ABC-1234" style="text-transform:uppercase" />
+      <input class="form-input" id="f-placa-carreta" type="text" placeholder="ABC-1234" maxlength="15" style="text-transform:uppercase" />
     </div>`;
 
   return `

@@ -70,12 +70,12 @@ async function initSchema() {
         cpf              VARCHAR(14),
         -- cavalo
         veiculo_id       INTEGER      REFERENCES veiculos(id)  ON DELETE SET NULL,
-        placa_veiculo    VARCHAR(10),
+        placa_veiculo    VARCHAR(20),
         antt_veiculo     VARCHAR(20),
         empresa_veiculo  VARCHAR(255),
         -- carreta (pode ser de outro ANTT/CNPJ)
         carreta_id       INTEGER      REFERENCES carretas(id)  ON DELETE SET NULL,
-        placa_carreta    VARCHAR(10),
+        placa_carreta    VARCHAR(20),
         antt_carreta     VARCHAR(20),
         empresa_carreta  VARCHAR(255),
         -- dados da carga
@@ -103,6 +103,8 @@ async function initSchema() {
         created_at       TIMESTAMPTZ  DEFAULT NOW()
       );
       ALTER TABLE vistorias ADD COLUMN IF NOT EXISTS relatorio_base VARCHAR(255);
+      ALTER TABLE vistorias ALTER COLUMN placa_veiculo TYPE VARCHAR(20);
+      ALTER TABLE vistorias ALTER COLUMN placa_carreta TYPE VARCHAR(20);
     `);
 
     // ── Seed empresas ────────────────────────────────────────────────
