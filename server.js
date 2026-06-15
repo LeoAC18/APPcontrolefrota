@@ -247,8 +247,8 @@ app.get('/api/vistorias', async (_req, res) => {
     urgencia:     r.has_reprovado ? 'Com reprovação' : 'Sem ocorrência',
     avarias:      r.avarias || [],
     noises:       r.noises  || [],
-    wordUrl:      r.relatorio_base ? `/relatorios/${r.relatorio_base}.docx`  : null,
-    pdfUrl:       r.relatorio_base ? `/relatorios/${r.relatorio_base}.pdf`   : null,
+    wordUrl:      r.relatorio_base && fs.existsSync(path.join(RELAT_DIR, `${r.relatorio_base}.docx`)) ? `/relatorios/${r.relatorio_base}.docx` : null,
+    pdfUrl:       r.relatorio_base && fs.existsSync(path.join(RELAT_DIR, `${r.relatorio_base}.pdf`))  ? `/relatorios/${r.relatorio_base}.pdf`  : null,
     wordFilename: r.relatorio_base ? `${r.relatorio_base}.docx` : null,
     pdfFilename:  r.relatorio_base ? `${r.relatorio_base}.pdf`  : null,
   })));
