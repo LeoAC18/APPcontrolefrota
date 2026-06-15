@@ -102,10 +102,13 @@ async function initSchema() {
         datetime         TIMESTAMPTZ  DEFAULT NOW(),
         created_at       TIMESTAMPTZ  DEFAULT NOW()
       );
-      ALTER TABLE vistorias ADD COLUMN IF NOT EXISTS relatorio_base VARCHAR(255);
-      ALTER TABLE vistorias ALTER COLUMN placa_veiculo TYPE VARCHAR(20);
-      ALTER TABLE vistorias ALTER COLUMN placa_carreta TYPE VARCHAR(20);
     `);
+
+    // ── Migrações de schema ───────────────────────────────────────────
+    await client.query(`ALTER TABLE vistorias ADD COLUMN IF NOT EXISTS relatorio_base VARCHAR(255)`);
+    await client.query(`ALTER TABLE vistorias ALTER COLUMN placa_veiculo TYPE VARCHAR(20)`);
+    await client.query(`ALTER TABLE vistorias ALTER COLUMN placa_carreta TYPE VARCHAR(20)`);
+    console.log('[DB] Migrações aplicadas.');
 
     // ── Seed empresas ────────────────────────────────────────────────
     await client.query(`
