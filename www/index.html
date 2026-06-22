@@ -488,20 +488,34 @@
       <div class="section-title" style="color:var(--warning)">⚡ Viagem em Andamento</div>
       <div style="background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);padding:16px 18px;border-left:4px solid var(--warning)">
         <div id="active-trip-info"></div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
-          <div style="font-size:12px;color:#888;font-weight:600;letter-spacing:.5px;margin-bottom:2px">REGISTRAR NOVA PARADA</div>
-          <div style="display:flex;gap:8px">
-            <button onclick="startNewStop('rmc045')" class="btn-primary" style="flex:1;font-size:14px;padding:12px 8px">
-              🚛 Rodoviário
-            </button>
-            <button onclick="startNewStop('rmc046')" class="btn-primary" style="flex:1;font-size:14px;padding:12px 8px;background:var(--secondary)">
-              📦 Container FCL
-            </button>
+
+        <!-- Seção RMC-045 — Rodoviário -->
+        <div style="margin-top:14px;border:1.5px solid var(--gray-200);border-radius:10px;padding:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:var(--primary)">🚛 Relatório Rodoviário</div>
+            <div style="font-size:11px;font-weight:600;color:var(--gray-500);background:var(--gray-100);border-radius:6px;padding:3px 8px">RMC-045</div>
           </div>
-          <button onclick="startFinal()" class="btn-secondary" style="margin-top:4px;font-size:15px;padding:12px">
-            ✅ Finalizar Viagem
+          <div id="count-stops-045" style="font-size:12px;color:var(--gray-500);margin-bottom:8px">0 parada(s) registrada(s)</div>
+          <button onclick="startNewStop('rmc045')" class="btn-primary" style="width:100%;font-size:13px;padding:10px 8px">
+            + Adicionar parada rodoviária
           </button>
         </div>
+
+        <!-- Seção RMC-046 — Container FCL -->
+        <div style="margin-top:10px;border:1.5px solid var(--gray-200);border-radius:10px;padding:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:700;color:#7c3aed">📦 Relatório Container FCL</div>
+            <div style="font-size:11px;font-weight:600;color:var(--gray-500);background:var(--gray-100);border-radius:6px;padding:3px 8px">RMC-046</div>
+          </div>
+          <div id="count-stops-046" style="font-size:12px;color:var(--gray-500);margin-bottom:8px">0 parada(s) registrada(s)</div>
+          <button onclick="startNewStop('rmc046')" class="btn-primary" style="width:100%;font-size:13px;padding:10px 8px;background:#7c3aed">
+            + Adicionar parada container
+          </button>
+        </div>
+
+        <button onclick="startFinal()" class="btn-secondary" style="margin-top:12px;width:100%;font-size:15px;padding:12px">
+          ✅ Finalizar Viagem
+        </button>
       </div>
     </div>
 
@@ -590,19 +604,31 @@
       Notificação enviada ao gestor · <strong id="success-time"></strong>
     </div>
 
-    <!-- Download buttons (hidden initially) -->
-    <div id="download-area" style="display:none;width:100%;max-width:320px">
-      <a id="btn-download-word" href="#" download class="btn-primary" style="text-decoration:none;margin-bottom:10px">
-        📄 Baixar Relatório Word (.docx)
+    <!-- Download RMC-045 (hidden initially) -->
+    <div id="download-area-045" style="display:none;width:100%;max-width:320px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;text-align:left;padding:0 2px">🚛 RMC-045 — Rodoviário</div>
+      <a class="dl-word-045 btn-primary" href="#" download style="text-decoration:none;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        📄 Baixar Word (.docx)
       </a>
-      <a id="btn-download-pdf" href="#" download class="btn-secondary" style="text-decoration:none;display:none">
-        📕 Baixar Relatório PDF
+      <a class="dl-pdf-045 btn-secondary" href="#" download style="text-decoration:none;display:none;align-items:center;justify-content:center;gap:8px">
+        📕 Baixar PDF
+      </a>
+    </div>
+
+    <!-- Download RMC-046 (hidden initially) -->
+    <div id="download-area-046" style="display:none;width:100%;max-width:320px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px;text-align:left;padding:0 2px">📦 RMC-046 — Container FCL</div>
+      <a class="dl-word-046 btn-primary" href="#" download style="text-decoration:none;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;background:#7c3aed">
+        📄 Baixar Word (.docx)
+      </a>
+      <a class="dl-pdf-046 btn-secondary" href="#" download style="text-decoration:none;display:none;align-items:center;justify-content:center;gap:8px">
+        📕 Baixar PDF
       </a>
     </div>
 
     <!-- Loading state -->
     <div id="report-loading" style="display:none;text-align:center;color:var(--gray-500);font-size:14px;margin:12px 0">
-      ⏳ Gerando relatório Word/PDF...
+      ⏳ Gerando relatórios Word/PDF...
     </div>
     <!-- Error state -->
     <div id="report-error" style="display:none;background:var(--danger-light);color:var(--danger);border-radius:10px;padding:12px;font-size:13px;width:100%;max-width:320px;margin-bottom:12px"></div>
@@ -909,6 +935,7 @@ function startFinal() {
 function savePartidaAndGoHome() {
   saveCurrentStep(); // salva stop-0
   state.stops[0].motivo = state.stops[0].motivo || FORMS_CONFIG[state.formType].motivos[0];
+  if (!state.stops[0].stopFormType) state.stops[0].stopFormType = state.formType;
   activeTrip = {
     id: Date.now(),
     formType: state.formType,
@@ -1560,18 +1587,20 @@ function removePhoto(i) { photos.splice(i, 1); renderPhotos(); updatePhotoFabCou
 /* ═══════════════════════════════════════
    SUBMETER
 ═══════════════════════════════════════ */
-function submitForm() {
+async function submitForm() {
   state.stops[0].motivo = state.stops[0].motivo || FORMS_CONFIG[state.formType].motivos[0];
 
-  const hasReprovado = state.stops.some(s =>
-    !s.pulada && Object.values(s.items).some(v => v === 'R')
-  );
+  const allStops  = state.stops;
+  const stops045  = allStops.filter(s => (s.stopFormType || state.formType) === 'rmc045');
+  const stops046  = allStops.filter(s => (s.stopFormType || state.formType) === 'rmc046');
 
-  const vistoria = {
+  const hasRep045 = stops045.some(s => !s.pulada && Object.values(s.items).some(v => v === 'R'));
+  const hasRep046 = stops046.some(s => !s.pulada && Object.values(s.items).some(v => v === 'R'));
+  const hasReprovado = hasRep045 || hasRep046;
+
+  const baseVistoria = {
     id: Date.now(),
     datetime: new Date().toISOString(),
-    formType: state.formType,
-    formCodigo: FORMS_CONFIG[state.formType].codigo,
     processo: state.processo,
     responsavel: getVal('f-resp-final') || state.responsavel,
     motorista: state.motorista,
@@ -1586,7 +1615,6 @@ function submitForm() {
     lacreArmador: state.lacreArmador,
     lacreMC: state.lacreMC,
     lacreExportador: state.lacreExportador,
-    stops: state.stops,
     obs: getVal('f-obs-final'),
     dataInspecao: getVal('f-data-final'),
     horaInspecao: getVal('f-hora-final'),
@@ -1594,22 +1622,23 @@ function submitForm() {
     hasReprovado: hasReprovado
   };
 
-  vistorias.push(vistoria);
+  // Salva localmente e limpa viagem ativa
+  vistorias.push({ ...baseVistoria, formType: state.formType, formCodigo: FORMS_CONFIG[state.formType].codigo, stops: allStops });
   localStorage.setItem('vistorias_mc', JSON.stringify(vistorias));
-  // Limpa a viagem ativa
   activeTrip = null;
   localStorage.removeItem('activeTrip_mc');
 
-  const dt = new Date(vistoria.datetime);
+  const dt = new Date(baseVistoria.datetime);
   document.getElementById('success-time').textContent =
     dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   document.getElementById('success-details').innerHTML = `
-    <div class="row"><span class="k">Formulário</span><span class="v">${vistoria.formCodigo}</span></div>
-    <div class="row"><span class="k">Motorista</span><span class="v">${vistoria.motorista}</span></div>
-    <div class="row"><span class="k">Placa</span><span class="v">${vistoria.placaVeiculo}</span></div>
-    <div class="row"><span class="k">Rota</span><span class="v">${vistoria.localColeta} → ${vistoria.destino}</span></div>
-    <div class="row"><span class="k">Data/Hora</span><span class="v">${vistoria.dataInspecao} às ${vistoria.horaInspecao}</span></div>
+    <div class="row"><span class="k">Motorista</span><span class="v">${escHtml(baseVistoria.motorista)}</span></div>
+    <div class="row"><span class="k">Placa</span><span class="v">${escHtml(baseVistoria.placaVeiculo)}</span></div>
+    <div class="row"><span class="k">Rota</span><span class="v">${escHtml(baseVistoria.localColeta)} → ${escHtml(baseVistoria.destino)}</span></div>
+    <div class="row"><span class="k">Data/Hora</span><span class="v">${baseVistoria.dataInspecao} às ${baseVistoria.horaInspecao}</span></div>
+    ${stops045.length ? `<div class="row"><span class="k">RMC-045</span><span class="v">${stops045.length} parada(s)</span></div>` : ''}
+    ${stops046.length ? `<div class="row"><span class="k">RMC-046</span><span class="v">${stops046.length} parada(s)</span></div>` : ''}
     <div class="row"><span class="k">Status</span><span class="v">
       ${hasReprovado
         ? '<span class="badge warn">⚠️ Itens Reprovados</span>'
@@ -1619,45 +1648,66 @@ function submitForm() {
 
   goTo('success');
 
-  document.getElementById('download-area').style.display = 'none';
+  document.getElementById('download-area-045').style.display = 'none';
+  document.getElementById('download-area-046').style.display = 'none';
   document.getElementById('report-error').style.display = 'none';
   document.getElementById('report-loading').style.display = 'block';
 
   const base = window.SERVER_URL || '';
+  const promises = [];
 
-  fetch(base + '/api/vistorias', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify(vistoria)
-  })
-  .then(r => r.json())
-  .then(data => {
+  if (stops045.length > 0) {
+    promises.push(
+      fetch(base + '/api/vistorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ ...baseVistoria, formType: 'rmc045', formCodigo: 'RMC-045', stops: stops045, hasReprovado: hasRep045 })
+      }).then(r => r.json()).then(data => ({ _tipo: 'rmc045', ...data }))
+    );
+  }
+
+  if (stops046.length > 0) {
+    promises.push(
+      fetch(base + '/api/vistorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ ...baseVistoria, formType: 'rmc046', formCodigo: 'RMC-046', stops: stops046, hasReprovado: hasRep046 })
+      }).then(r => r.json()).then(data => ({ _tipo: 'rmc046', ...data }))
+    );
+  }
+
+  try {
+    const results = await Promise.all(promises);
     document.getElementById('report-loading').style.display = 'none';
-    if (!data.ok) throw new Error(data.error || 'Erro desconhecido');
 
-    const btnWord = document.getElementById('btn-download-word');
-    btnWord.href = base + data.wordUrl;
-    btnWord.setAttribute('download', data.wordFilename);
+    let algumErro = false;
+    results.forEach(data => {
+      if (!data.ok) { algumErro = true; return; }
+      const areaId  = data._tipo === 'rmc045' ? 'download-area-045' : 'download-area-046';
+      const area    = document.getElementById(areaId);
+      area.style.display = 'block';
+      const wordBtn = area.querySelector(`.dl-word-${data._tipo === 'rmc045' ? '045' : '046'}`);
+      const pdfBtn  = area.querySelector(`.dl-pdf-${data._tipo  === 'rmc045' ? '045' : '046'}`);
+      wordBtn.href = base + data.wordUrl;
+      wordBtn.setAttribute('download', data.wordFilename);
+      if (data.pdfUrl) {
+        pdfBtn.href = base + data.pdfUrl;
+        pdfBtn.setAttribute('download', data.pdfFilename);
+        pdfBtn.style.display = 'flex';
+      }
+    });
 
-    const btnPdf = document.getElementById('btn-download-pdf');
-    if (data.pdfUrl) {
-      btnPdf.href = base + data.pdfUrl;
-      btnPdf.setAttribute('download', data.pdfFilename);
-      btnPdf.style.display = 'flex';
-    }
-
-    document.getElementById('download-area').style.display = 'block';
-  })
-  .catch(err => {
+    if (algumErro) throw new Error('Erro ao gerar um dos relatórios');
+  } catch (err) {
     document.getElementById('report-loading').style.display = 'none';
     const errEl = document.getElementById('report-error');
     if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      errEl.innerHTML = '⚠️ <strong>Sem conexão com o servidor.</strong> A vistoria foi salva no dispositivo mas o relatório não pôde ser gerado. Tente novamente quando houver conexão.';
+      errEl.innerHTML = '⚠️ <strong>Sem conexão com o servidor.</strong> A vistoria foi salva no dispositivo mas os relatórios não puderam ser gerados. Tente novamente quando houver conexão.';
     } else {
       errEl.innerHTML = '⚠️ <strong>Erro no servidor:</strong> ' + err.message + '<br><small style="opacity:.7">A vistoria foi salva localmente mas pode não ter chegado ao gestor. Entre em contato com o suporte.</small>';
     }
     errEl.style.display = 'block';
-  });
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -1684,8 +1734,10 @@ function renderHome() {
   if (activeTrip) {
     activeSec.style.display = '';
     novaSec.style.display   = 'none';
-    const nParadas = activeTrip.stops ? activeTrip.stops.length : 0;
-    const carreta  = activeTrip.placaCarreta ? ` · ${activeTrip.placaCarreta}` : '';
+    const carreta   = activeTrip.placaCarreta ? ` · ${activeTrip.placaCarreta}` : '';
+    const allStops  = activeTrip.stops || [];
+    const n045 = allStops.filter(s => (s.stopFormType || activeTrip.formType) === 'rmc045').length;
+    const n046 = allStops.filter(s => (s.stopFormType || activeTrip.formType) === 'rmc046').length;
     document.getElementById('active-trip-info').innerHTML = `
       <div style="font-size:16px;font-weight:800;color:var(--gray-900);margin-bottom:4px">
         ${escHtml(activeTrip.motorista)} &nbsp;·&nbsp; ${escHtml(activeTrip.placaVeiculo)}${escHtml(carreta)}
@@ -1694,9 +1746,11 @@ function renderHome() {
         ${escHtml(activeTrip.localColeta)} → ${escHtml(activeTrip.destino)}
       </div>
       <div style="font-size:12px;color:var(--gray-400)">
-        ${nParadas} parada(s) registrada(s) · iniciada ${formatTime(new Date(activeTrip.startedAt))}
+        Iniciada ${formatTime(new Date(activeTrip.startedAt))}
       </div>
     `;
+    document.getElementById('count-stops-045').textContent = `${n045} parada(s) registrada(s)`;
+    document.getElementById('count-stops-046').textContent = `${n046} parada(s) registrada(s)`;
   } else {
     activeSec.style.display = 'none';
     novaSec.style.display   = '';
