@@ -1552,6 +1552,16 @@ function openVistoria(id) {
   const hasIssue = v.avarias.length > 0 || v.noises.length > 0;
 
   document.getElementById('modal-vistoria-body').innerHTML = `
+    <div style="display:flex;gap:8px;border-bottom:1px solid var(--gray-200);margin-bottom:14px">
+      <button class="vtab-btn" id="vtab-btn-detalhes" onclick="switchVistoriaTab('detalhes')"
+              style="background:none;border:none;border-bottom:2px solid var(--primary);color:var(--primary);font-weight:700;padding:8px 6px;cursor:pointer">Detalhes</button>
+      <button class="vtab-btn" id="vtab-btn-imagens" onclick="switchVistoriaTab('imagens')"
+              style="background:none;border:none;border-bottom:2px solid transparent;color:var(--gray-500);font-weight:600;padding:8px 6px;cursor:pointer">📷 Imagens</button>
+    </div>
+    <div id="vtab-imagens" style="display:none">
+      <div id="vfotos-container" style="text-align:center;color:var(--gray-500);padding:20px">Carregando imagens...</div>
+    </div>
+    <div id="vtab-detalhes">
     <div class="form-row" style="margin-bottom:8px">
       <div><div class="form-label">Motorista</div><div style="font-size:15px;font-weight:700">${v.motorista}</div></div>
       <div><div class="form-label">Placa</div><div style="font-size:15px;font-weight:700">${v.placa||'—'}</div></div>
@@ -1579,15 +1589,66 @@ function openVistoria(id) {
       <div class="form-label">Anomalias / ruídos</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${v.noises.map(n=>`<span class="badge warn">${n}</span>`).join('')}</div>
     </div>` : ''}
-    ${v.obs ? `<div class="form-group"><div class="form-label">Observações do motorista</div><div style="font-size:13px;color:var(--gray-700);background:var(--gray-50);padding:10px;border-radius:8px">${v.obs}</div></div>` : ''}
+    ${v.obs ? `<div class="form-group"><div class="form-label">Observações do motorista</div><div style="font-size:13px;color:var(--gray-700);background:var(--gray-50);padding:10px;border-radius:8px;white-space:pre-wrap">${v.obs}</div></div>` : ''}
     <div style="margin-top:12px;display:flex;justify-content:center">
-      <span class="badge ${hasIssue ? 'danger' : 'ok'}" style="font-size:13px;padding:6px 16px">${hasIssue ? '⚠ Contém ocorrências' : '✓ Vistoria sem avarias'}</span>
+      <span class="badge ${hasIssue ? 'danger' : 'ok'}" style="font-size:13px;padding:6px 16px">${hasIssue ? '⚠ Contém ocorrências' : '✓ Check List sem reprovações'}</span>
+    </div>
     </div>
   `;
 
+  vistoriaFotosCarregadas = false;
+  switchVistoriaTab('detalhes');
   document.getElementById('modal-btn-aprovar').style.display = v.status === 'pending' ? '' : 'none';
   document.getElementById('modal-btn-reprovar').style.display = v.status === 'pending' ? '' : 'none';
   openModal('modal-vistoria');
+}
+
+let vistoriaFotosCarregadas = false;
+
+function switchVistoriaTab(tab) {
+  const isImg = tab === 'imagens';
+  document.getElementById('vtab-detalhes').style.display = isImg ? 'none' : '';
+  document.getElementById('vtab-imagens').style.display  = isImg ? '' : 'none';
+  const bd = document.getElementById('vtab-btn-detalhes');
+  const bi = document.getElementById('vtab-btn-imagens');
+  bd.style.color = isImg ? 'var(--gray-500)' : 'var(--primary)';
+  bd.style.borderBottomColor = isImg ? 'transparent' : 'var(--primary)';
+  bd.style.fontWeight = isImg ? '600' : '700';
+  bi.style.color = isImg ? 'var(--primary)' : 'var(--gray-500)';
+  bi.style.borderBottomColor = isImg ? 'var(--primary)' : 'transparent';
+  bi.style.fontWeight = isImg ? '700' : '600';
+  if (isImg && !vistoriaFotosCarregadas) loadVistoriaFotos(currentVistoriaId);
+}
+
+async function loadVistoriaFotos(id) {
+  vistoriaFotosCarregadas = true;
+  const c = document.getElementById('vfotos-container');
+  c.innerHTML = '<div style="color:var(--gray-500);padding:20px">Carregando imagens...</div>';
+  try {
+    const res = await fetch(`/api/vistorias/${id}/fotos`, { headers: gAuthHeader() });
+    if (!res.ok) throw new Error('Erro ' + res.status);
+    const fotos = await res.json();
+    if (!fotos.length) {
+      c.innerHTML = '<div style="color:var(--gray-500);padding:20px;text-align:center">Nenhuma imagem enviada para este check list.</div>';
+      return;
+    }
+    c.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' + fotos.map(f => {
+      const nome = f.nome || `${f.lacre_label || 'Lacre'} — ${f.stop_label || ''}`;
+      const fname = (nome.replace(/[^a-zA-Z0-9]+/g, '_') || 'foto') + '.jpg';
+      return `
+        <div style="border:1px solid var(--gray-200);border-radius:10px;overflow:hidden;background:#fff">
+          <a href="${f.dados}" target="_blank" download="${fname}">
+            <img src="${f.dados}" alt="${nome}" style="width:100%;height:150px;object-fit:cover;display:block" />
+          </a>
+          <div style="padding:8px 10px">
+            <div style="font-size:12px;font-weight:700;color:var(--gray-800)">${nome}</div>
+            <a href="${f.dados}" download="${fname}" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none">⬇ Baixar</a>
+          </div>
+        </div>`;
+    }).join('') + '</div>';
+  } catch (e) {
+    c.innerHTML = `<div style="color:var(--danger);padding:20px;text-align:center">Erro ao carregar imagens: ${e.message}</div>`;
+  }
 }
 
 function _patchVistoria(status) {

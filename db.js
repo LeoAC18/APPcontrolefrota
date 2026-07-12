@@ -110,6 +110,18 @@ async function initSchema() {
         created_at   TIMESTAMPTZ  DEFAULT NOW()
       );
 
+      -- Fotos dos lacres enviadas pelo motorista (base64), por parada
+      CREATE TABLE IF NOT EXISTS vistoria_fotos (
+        id           SERIAL PRIMARY KEY,
+        vistoria_id  INTEGER      REFERENCES vistorias(id) ON DELETE CASCADE,
+        lacre        VARCHAR(20),
+        lacre_label  VARCHAR(60),
+        stop_label   VARCHAR(40),
+        nome         VARCHAR(120),
+        dados        TEXT,
+        created_at   TIMESTAMPTZ  DEFAULT NOW()
+      );
+
       -- Histórico de alterações feitas pelo gestor nas vistorias
       CREATE TABLE IF NOT EXISTS vistoria_alteracoes (
         id               SERIAL PRIMARY KEY,

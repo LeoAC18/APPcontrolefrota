@@ -27,8 +27,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Body limit — dados de vistoria são texto, não base64 de fotos
-app.use(express.json({ limit: '2mb' }));
+// Body limit — inclui fotos dos lacres (base64 comprimido no cliente)
+app.use(express.json({ limit: '30mb' }));
 
 // CORS — wildcard necessário para Capacitor nativo (sem Origin header)
 app.use((req, res, next) => {
@@ -351,6 +351,15 @@ app.get('/api/vistorias/minhas', verifyToken, async (req, res) => {
   })));
 });
 
+// Fotos dos lacres de uma vistoria — gestor
+app.get('/api/vistorias/:id/fotos', verifyToken, requireGestor, async (req, res) => {
+  const { rows } = await dbQuery(
+    'SELECT id, lacre, lacre_label, stop_label, nome, dados FROM vistoria_fotos WHERE vistoria_id=$1 ORDER BY id',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
 // Histórico de alterações de uma vistoria — gestor
 app.get('/api/vistorias/:id/alteracoes', verifyToken, requireGestor, async (req, res) => {
   const { rows } = await dbQuery(
@@ -430,6 +439,25 @@ app.post('/api/vistorias', verifyToken, async (req, res) => {
         base,
       ]
     );
+
+    const savedIdEarly = (rows && rows.length) ? rows[0].id : null;
+
+    // Salva as fotos dos lacres (base64) associadas a esta vistoria
+    if (savedIdEarly && Array.isArray(d.fotos) && d.fotos.length) {
+      for (const f of d.fotos) {
+        if (!f || !f.dataUrl) continue;
+        const nome = `${f.lacreLabel || f.lacre || 'Lacre'} — ${f.stopLabel || ''}`.trim();
+        try {
+          await dbQuery(
+            `INSERT INTO vistoria_fotos (vistoria_id, lacre, lacre_label, stop_label, nome, dados)
+             VALUES ($1,$2,$3,$4,$5,$6)`,
+            [savedIdEarly, f.lacre || null, f.lacreLabel || null, f.stopLabel || null, nome, f.dataUrl]
+          );
+        } catch (fotoErr) {
+          console.error('[FOTO] Falha ao salvar foto de lacre:', fotoErr.message);
+        }
+      }
+    }
 
     if (motoristaBd) {
       await dbQuery(

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>MC Transportes — Vistoria</title>
+  <title>MC Transportes — Check List</title>
 
   <!-- iOS / Android native hints -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MC Vistoria" />
+  <meta name="apple-mobile-web-app-title" content="MC Check List" />
   <meta name="theme-color" content="#1a56db" />
   <link rel="apple-touch-icon" href="logomctransportes.png" />
 
@@ -431,7 +431,7 @@
     </div>
     <div class="login-card">
       <div class="login-title">Acesso ao Sistema</div>
-      <div class="login-sub">MC Transportes — Vistoria de Frota</div>
+      <div class="login-sub">MC Transportes — Check List de Frota</div>
       <div class="login-error" id="login-error"></div>
       <div class="form-group">
         <label class="form-label">CPF (somente números)</label>
@@ -468,20 +468,10 @@
     </div>
     <div style="height:12px"></div>
     <div style="font-size:22px;font-weight:800;margin-bottom:4px">Olá, <span id="home-nome-motorista">Motorista</span> 👋</div>
-    <div style="font-size:14px;opacity:.8">Selecione o tipo de vistoria para começar.</div>
+    <div style="font-size:14px;opacity:.8">Selecione o tipo de Check List para começar.</div>
   </div>
 
-  <div class="home-content has-bottom-nav">
-    <div class="status-row">
-      <div class="status-item">
-        <div class="s-label">Última vistoria</div>
-        <div class="s-value ok" id="last-vistoria-text">—</div>
-      </div>
-      <div class="status-item">
-        <div class="s-label">Hoje</div>
-        <div class="s-value" id="vistorias-hoje">0 vistorias</div>
-      </div>
-    </div>
+  <div class="home-content">
 
     <!-- Card viagem em andamento — visível quando há activeTrip -->
     <div id="active-trip-section" style="display:none; margin-bottom:20px">
@@ -519,16 +509,16 @@
       </div>
     </div>
 
-    <!-- Nova Vistoria — oculto quando há viagem em andamento -->
+    <!-- Novo Check List — oculto quando há viagem em andamento -->
     <div id="nova-vistoria-section">
-      <div class="section-title">Nova Vistoria</div>
+      <div class="section-title">Novo Check List</div>
       <div class="type-cards">
         <div class="type-card" onclick="startForm('rmc045')">
           <div class="type-card-icon">🚛</div>
           <div class="type-card-info">
             <div class="tc-code">RMC-045</div>
-            <div class="tc-title">Transporte Rodoviário</div>
-            <div class="tc-sub">21 pontos de verificação</div>
+            <div class="tc-title">Check List 21 Pontos</div>
+            <div class="tc-sub">Transporte Rodoviário</div>
           </div>
           <div class="type-card-arrow">›</div>
         </div>
@@ -536,24 +526,14 @@
           <div class="type-card-icon">📦</div>
           <div class="type-card-info">
             <div class="tc-code">RMC-046</div>
-            <div class="tc-title">Container FCL</div>
-            <div class="tc-sub">11 pontos de verificação</div>
+            <div class="tc-title">Check List 11 Pontos</div>
+            <div class="tc-sub">Container FCL</div>
           </div>
           <div class="type-card-arrow">›</div>
         </div>
       </div>
     </div>
-
-    <div class="section-title" style="margin-top:8px">Últimas vistorias</div>
-    <div id="recent-list">
-      <div class="empty-recent">Nenhuma vistoria registrada ainda.</div>
-    </div>
   </div>
-
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
-    <button class="nav-item" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
-  </nav>
 </div>
 
 
@@ -566,7 +546,7 @@
       <button class="btn-back" onclick="goTo('home')">← Voltar</button>
       <span class="form-step-count" id="form-step-count">Etapa 1 de 7</span>
     </div>
-    <div class="form-title" id="form-title">Vistoria</div>
+    <div class="form-title" id="form-title">Check List</div>
     <div class="form-subtitle" id="form-subtitle"></div>
     <div class="steps-bar" id="steps-bar"></div>
   </div>
@@ -580,23 +560,13 @@
   </div>
 </div>
 
-<!-- FAB de Fotos — visível em qualquer etapa do formulário -->
-<div id="photo-fab" style="display:none;position:fixed;bottom:88px;right:18px;z-index:300">
-  <label title="Tirar/adicionar foto" style="width:54px;height:54px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(26,86,219,.45);font-size:24px;position:relative;color:#fff">
-    <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this)" style="display:none" />
-    📷
-    <span id="photo-fab-count" style="position:absolute;top:-5px;right:-5px;background:var(--danger);color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;line-height:1"></span>
-  </label>
-</div>
-
-
 <!-- ══════════════════════════════════════
      TELA: SUCESSO
 ══════════════════════════════════════ -->
 <div id="screen-success" class="screen">
   <div class="success-screen">
     <div class="success-icon">✅</div>
-    <div class="success-title">Vistoria Registrada!</div>
+    <div class="success-title">Check List Registrado!</div>
     <div class="success-sub">O registro foi salvo com sucesso e o gestor foi notificado.</div>
     <div class="success-card" id="success-details"></div>
     <div class="notify-banner">
@@ -604,56 +574,15 @@
       Notificação enviada ao gestor · <strong id="success-time"></strong>
     </div>
 
-    <!-- Download RMC-045 (hidden initially) -->
-    <div id="download-area-045" style="display:none;width:100%;max-width:320px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;text-align:left;padding:0 2px">🚛 RMC-045 — Rodoviário</div>
-      <a class="dl-word-045 btn-primary" href="#" download style="text-decoration:none;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
-        📄 Baixar Word (.docx)
-      </a>
-      <a class="dl-pdf-045 btn-secondary" href="#" download style="text-decoration:none;display:none;align-items:center;justify-content:center;gap:8px">
-        📕 Baixar PDF
-      </a>
-    </div>
-
-    <!-- Download RMC-046 (hidden initially) -->
-    <div id="download-area-046" style="display:none;width:100%;max-width:320px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px;text-align:left;padding:0 2px">📦 RMC-046 — Container FCL</div>
-      <a class="dl-word-046 btn-primary" href="#" download style="text-decoration:none;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;background:#7c3aed">
-        📄 Baixar Word (.docx)
-      </a>
-      <a class="dl-pdf-046 btn-secondary" href="#" download style="text-decoration:none;display:none;align-items:center;justify-content:center;gap:8px">
-        📕 Baixar PDF
-      </a>
-    </div>
-
     <!-- Loading state -->
     <div id="report-loading" style="display:none;text-align:center;color:var(--gray-500);font-size:14px;margin:12px 0">
-      ⏳ Gerando relatórios Word/PDF...
+      ⏳ Enviando ao gestor...
     </div>
     <!-- Error state -->
     <div id="report-error" style="display:none;background:var(--danger-light);color:var(--danger);border-radius:10px;padding:12px;font-size:13px;width:100%;max-width:320px;margin-bottom:12px"></div>
 
     <button class="btn-primary" style="max-width:320px;margin-top:4px" onclick="goTo('home')">← Voltar ao início</button>
-    <button class="btn-secondary" style="max-width:320px" onclick="goTo('history')">📂 Ver histórico</button>
   </div>
-</div>
-
-
-<!-- ══════════════════════════════════════
-     TELA: HISTÓRICO
-══════════════════════════════════════ -->
-<div id="screen-history" class="screen">
-  <div class="header">
-    <div class="header-top">
-      <div class="header-logo">📂 Histórico de Vistorias</div>
-      <button class="btn-back" onclick="goTo('home')">← Início</button>
-    </div>
-  </div>
-  <div class="history-content has-bottom-nav" id="history-list"></div>
-  <nav class="bottom-nav">
-    <button class="nav-item" onclick="goTo('home')"><span class="nav-icon">🏠</span>Início</button>
-    <button class="nav-item active" onclick="goTo('history')"><span class="nav-icon">📂</span>Histórico</button>
-  </nav>
 </div>
 
 
@@ -663,7 +592,7 @@
 ═══════════════════════════════════════ */
 const FORMS_CONFIG = {
   rmc045: {
-    titulo: 'Transporte Rodoviário',
+    titulo: 'RMC 045 Check List 21 Pontos de Verificação',
     codigo: 'RMC-045-CL-TR-SC-R05',
     icone: '🚛',
     motivos: [
@@ -692,14 +621,14 @@ const FORMS_CONFIG = {
       { id: 15, label: 'Unidade de Refrigeração', dica: 'Verifique a carcaça e compartimentos da unidade de refrigeração.' },
       { id: 16, label: 'Escapamento / Caixa da Bateria', dica: null },
       { id: 17, label: 'Cabine / Compartimentos Internos', dica: 'Inspecione dormitório, gavetas, armários e todos os compartimentos internos.' },
-      { id: 18, label: 'Lacre do Armador — Método V.V.T.T.', dica: 'VVTT' },
-      { id: 19, label: 'Lacre MC Transportes — Método V.V.T.T.', dica: 'VVTT' },
-      { id: 20, label: 'Lacre do Exportador — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 18, label: 'Lacre do Armador — Método V.V.T.T.', dica: 'VVTT', lacre: 'armador' },
+      { id: 19, label: 'Lacre MC Transportes — Método V.V.T.T.', dica: 'VVTT', lacre: 'mc' },
+      { id: 20, label: 'Lacre do Exportador — Método V.V.T.T.', dica: 'VVTT', lacre: 'exportador' },
       { id: 21, label: 'Ausência de Pragas Visíveis', dica: 'PRAGAS' }
     ]
   },
   rmc046: {
-    titulo: 'Container FCL',
+    titulo: 'RMC 046 Check List 11 Pontos de Verificação',
     codigo: 'RMC-046-CL-CONTAINERES-EM-FCL-SC-R05',
     icone: '📦',
     motivos: [
@@ -719,7 +648,7 @@ const FORMS_CONFIG = {
       { id: 7,  label: 'Piso Interno', dica: 'Verifique toda a extensão do piso interno por irregularidades ou compartimentos falsos.' },
       { id: 8,  label: 'Parede de Fundo (verificar profundidade)', dica: 'Meça a profundidade interna e compare com a externa para detectar espaços ocultos.' },
       { id: 9,  label: 'Carcaça do Ventilador (Sistema de Refrigeração)', dica: null },
-      { id: 10, label: 'Lacre MC Transporte — Método V.V.T.T.', dica: 'VVTT' },
+      { id: 10, label: 'Lacre MC Transporte — Método V.V.T.T.', dica: 'VVTT', lacre: 'mc' },
       { id: 11, label: 'Ausência de Pragas Visíveis', dica: 'PRAGAS' }
     ]
   }
@@ -806,7 +735,6 @@ let state = {};
 let steps = [];      // 'ident' | 'carga' | 'stop-N' | 'final'
 let stepIdx = 0;
 let formMode = 'partida'; // 'partida' | 'parada' | 'final'
-let photos = [];
 let vistorias = JSON.parse(localStorage.getItem('vistorias_mc') || '[]');
 // Viagem em andamento (salva entre sessões)
 let activeTrip = JSON.parse(localStorage.getItem('activeTrip_mc') || 'null');
@@ -871,10 +799,7 @@ function goTo(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + screenId).classList.add('active');
   window.scrollTo(0, 0);
-  const fab = document.getElementById('photo-fab');
-  if (fab) fab.style.display = screenId === 'form' ? '' : 'none';
-  if (screenId === 'home')    renderHome();
-  if (screenId === 'history') renderHistory();
+  if (screenId === 'home') renderHome();
 }
 
 function startForm(type) {
@@ -885,7 +810,8 @@ function startForm(type) {
     : null;
   state = {
     formType: type,
-    processo: '', responsavel: '',
+    processo: '',
+    responsavel:  mLogado ? mLogado.nome : (currentUser?.nome || ''),
     motorista:    mLogado ? mLogado.nome : '',
     cpf:          mLogado ? mLogado.cpf  : '',
     _motoristaId: mLogado ? mLogado.id   : null,
@@ -898,7 +824,6 @@ function startForm(type) {
   steps = ['ident', 'carga', 'stop-0'];
   stepIdx = 0;
   formMode = 'partida';
-  photos = [];
   goTo('form');
   renderStep();
 }
@@ -915,7 +840,6 @@ function startNewStop(formType) {
   steps = [`stop-${newIdx}`];
   stepIdx = 0;
   formMode = 'parada';
-  photos = activeTrip.photoData || [];
   goTo('form');
   renderStep();
 }
@@ -926,7 +850,6 @@ function startFinal() {
   steps = ['final'];
   stepIdx = 0;
   formMode = 'final';
-  photos = activeTrip.photoData || [];
   goTo('form');
   renderStep();
 }
@@ -957,7 +880,6 @@ function savePartidaAndGoHome() {
     lacreMC: state.lacreMC,
     lacreExportador: state.lacreExportador,
     stops: state.stops,
-    photoData: photos,
     startedAt: new Date().toISOString()
   };
   localStorage.setItem('activeTrip_mc', JSON.stringify(activeTrip));
@@ -969,7 +891,6 @@ function saveParadaAndGoHome() {
   const si = parseInt(steps[stepIdx].split('-')[1]);
   saveStop(si);
   activeTrip.stops = state.stops;
-  activeTrip.photoData = photos;
   localStorage.setItem('activeTrip_mc', JSON.stringify(activeTrip));
   goTo('home');
 }
@@ -983,9 +904,23 @@ function createStop(idx, type) {
     motivo: idx === 0 ? cfg.motivos[0] : '',
     local: '',
     items: items,
+    reprovaReasons: {},          // { [pontoId]: 'motivo da reprova' }
+    lacrePhotos: {},             // { armador|mc|exportador: dataURL }
+    houveAlteracao: idx === 0 ? true : null, // partida sempre preenche; parada pergunta
     comentarios: '',
     pulada: false
   };
+}
+
+/* Lista de lacres exigidos por tipo de formulário */
+function lacresDoForm(type) {
+  const cfg = FORMS_CONFIG[type];
+  return cfg.pontos.filter(p => p.lacre).map(p => ({ key: p.lacre, label: p.label, pid: p.id }));
+}
+function lacreLabelCurto(key) {
+  return key === 'armador' ? 'Lacre Armador'
+       : key === 'exportador' ? 'Lacre Exportador'
+       : 'Lacre MC Transportes';
 }
 
 /* ═══════════════════════════════════════
@@ -1061,7 +996,6 @@ function renderStep() {
     restoreIPSelections(si);
     restoreMotivo(si);
   }
-  if (step === 'final') renderPhotos();
   window.scrollTo(0, 0);
 }
 
@@ -1242,17 +1176,23 @@ function renderStepCarga(cfg) {
     ` : ''}
     <div class="divider"></div>
     <div class="section-title">Lacres</div>
+    ${isContainer ? '' : `
     <div class="form-group">
       <label class="form-label">Lacre do Armador</label>
       <input class="form-input" id="f-lacre-armador" type="text" placeholder="Número do lacre" />
-    </div>
+    </div>`}
     <div class="form-group">
       <label class="form-label">Lacre MC Transportes</label>
       <input class="form-input" id="f-lacre-mc" type="text" placeholder="Número do lacre" />
     </div>
+    ${isContainer ? '' : `
     <div class="form-group">
       <label class="form-label">Lacre do Exportador</label>
       <input class="form-input" id="f-lacre-exportador" type="text" placeholder="Número do lacre" />
+    </div>`}
+    <div class="info-box" style="margin-top:4px;margin-bottom:0">
+      <span class="ib-icon">📷</span>
+      <span>A <strong>foto de cada lacre</strong> será solicitada e é obrigatória na etapa de inspeção (checklist).</span>
     </div>
   `;
 }
@@ -1333,6 +1273,16 @@ function renderStepStop(cfg, stopIdx) {
       </div>`;
     }
 
+    const reprovaVal = (stop.reprovaReasons || {})[p.id] || '';
+    const reprovaHidden = stop.items[p.id] === 'R' ? '' : 'display:none';
+    const reprovaHtml = `
+      <div class="reprova-box" id="reprova-${stopIdx}-${p.id}" style="padding:0 14px 12px;${reprovaHidden}">
+        <label class="form-label" style="color:var(--danger)">Motivo da reprova <span class="req">*</span></label>
+        <textarea class="form-textarea" id="f-reprova-${stopIdx}-${p.id}" style="min-height:60px;border-color:var(--danger)"
+          placeholder="Descreva o motivo da reprova deste ponto..."
+          oninput="onReprovaInput(${stopIdx}, ${p.id}, this)">${escHtml(reprovaVal)}</textarea>
+      </div>`;
+
     return `
       <div class="ip-card" id="ipc-${stopIdx}-${p.id}">
         <div class="ip-header">
@@ -1345,30 +1295,104 @@ function renderStepStop(cfg, stopIdx) {
           <button class="ip-btn reprovado" data-stop="${stopIdx}" data-pid="${p.id}" data-val="R" onclick="setIP(this)">❌ Reprovado</button>
           <button class="ip-btn na" data-stop="${stopIdx}" data-pid="${p.id}" data-val="NA" onclick="setIP(this)">— N/A</button>
         </div>
+        ${reprovaHtml}
       </div>
     `;
   }).join('');
+
+  // Seção de fotos dos lacres (obrigatória) — dedicada
+  const lacres = lacresDoForm(stop.stopFormType || state.formType);
+  const lacresPhotoHtml = lacres.map(l => renderLacrePhoto(stopIdx, l.key)).join('');
+
+  // A pergunta de alteração só faz sentido se já houver uma parada anterior do mesmo tipo
+  const temAnterior = !isPartida && !!previousStopSameType(stopIdx);
+  // Sem parada anterior do mesmo tipo, preenche normalmente (como a partida)
+  if (!isPartida && !temAnterior && stop.houveAlteracao === null) stop.houveAlteracao = true;
+
+  // Pergunta de alteração (só quando há parada anterior comparável)
+  const alteracaoHtml = temAnterior ? `
+    <div class="form-group">
+      <label class="form-label">Houve alguma alteração nos itens verificados? <span class="req">*</span></label>
+      <div class="motivo-grid" id="alteracao-grid">
+        <div class="motivo-item ${stop.houveAlteracao === true ? 'selected' : ''}" onclick="setHouveAlteracao(${stopIdx}, true)">Sim — refazer o checklist</div>
+        <div class="motivo-item ${stop.houveAlteracao === false ? 'selected' : ''}" onclick="setHouveAlteracao(${stopIdx}, false)">Não — manter respostas anteriores</div>
+      </div>
+    </div>` : '';
+
+  // Bloco do checklist (oculto até responder a pergunta quando há anterior)
+  const showChecklist = isPartida || !temAnterior || stop.houveAlteracao === true;
+  const naoAlterou    = temAnterior && stop.houveAlteracao === false;
+
+  const checklistHtml = `
+    <div id="checklist-block-${stopIdx}" style="${showChecklist ? '' : 'display:none'}">
+      <div class="divider"></div>
+      <div class="section-title">Pontos de Verificação (${cfg.pontos.length} itens)</div>
+      <div class="info-box" style="margin-bottom:12px">
+        <span class="ib-icon">👇</span>
+        <span>Para cada item abaixo, marque <strong>✅ Aprovado</strong>, <strong>❌ Reprovado</strong> ou <strong>— N/A</strong>.</span>
+      </div>
+      <div class="ip-list">${pontosHtml}</div>
+    </div>
+    <div id="mantido-block-${stopIdx}" style="${naoAlterou ? '' : 'display:none'}">
+      <div class="divider"></div>
+      <div class="info-box ok">
+        <span class="ib-icon">✓</span>
+        <span>As respostas dos ${cfg.pontos.length} pontos foram mantidas da parada anterior. É obrigatório tirar <strong>novas fotos de todos os lacres</strong> abaixo.</span>
+      </div>
+    </div>`;
+
+  // Seção de fotos dos lacres (sempre visível na parada)
+  const lacresSectionHtml = `
+    <div class="divider"></div>
+    <div class="section-title">Fotos dos Lacres (obrigatório)</div>
+    <div class="info-box" style="margin-bottom:12px">
+      <span class="ib-icon">📷</span>
+      <span>Tire uma foto de cada lacre nesta ${isPartida ? 'partida' : 'parada'}. Sem as fotos não é possível avançar.</span>
+    </div>
+    ${lacresPhotoHtml}`;
 
   return `
     <div class="step-label">Etapa ${etapa}</div>
     <div class="step-title">${stop.tipo} — Inspeção</div>
     ${motivoHtml}
+    ${alteracaoHtml}
     <div class="form-group">
       <label class="form-label">Local ${isPartida ? '(pré-preenchido da coleta)' : ''}</label>
       <input class="form-input" id="f-local-${stopIdx}" type="text" placeholder="Nome do local / endereço" value="${escHtml(stop.local)}" />
     </div>
-    <div class="divider"></div>
-    <div class="section-title">Pontos de Verificação (${cfg.pontos.length} itens)</div>
-    <div class="info-box" style="margin-bottom:12px">
-      <span class="ib-icon">👇</span>
-      <span>Para cada item abaixo, marque <strong>✅ Aprovado</strong>, <strong>❌ Reprovado</strong> ou <strong>— N/A</strong>.</span>
-    </div>
-    <div class="ip-list">${pontosHtml}</div>
+    ${checklistHtml}
+    ${lacresSectionHtml}
     <div class="form-group" style="margin-top:16px">
       <label class="form-label">Comentários / Observações desta parada</label>
       <textarea class="form-textarea" id="f-comentarios-${stopIdx}" placeholder="Descreva qualquer observação relevante...">${escHtml(stop.comentarios)}</textarea>
     </div>
   `;
+}
+
+/* Renderiza o cartão de foto de um lacre */
+function renderLacrePhoto(stopIdx, key) {
+  const stop = state.stops[stopIdx];
+  const src  = (stop.lacrePhotos || {})[key] || '';
+  const has  = !!src;
+  return `
+    <div class="ip-card" id="lacre-card-${stopIdx}-${key}" style="margin-bottom:10px">
+      <div class="ip-header">
+        <div class="ip-num" style="background:${has ? 'var(--success-light)' : 'var(--danger-light)'};color:${has ? 'var(--success)' : 'var(--danger)'}">${has ? '✓' : '!'}</div>
+        <div class="ip-label">${lacreLabelCurto(key)}</div>
+      </div>
+      <div style="padding:0 14px 12px">
+        <label class="photo-area" style="display:block;padding:14px">
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+                 onchange="onLacrePhoto(${stopIdx}, '${key}', this)" />
+          <div class="ph-icon">📷</div>
+          <div class="ph-text">${has ? 'Trocar foto do lacre' : 'Tirar foto do lacre'}</div>
+          <div class="ph-sub">Toque para capturar</div>
+        </label>
+        <div id="lacre-preview-${stopIdx}-${key}" class="photos-preview">
+          ${has ? `<div class="photo-thumb-wrap"><img src="${src}" class="photo-thumb" alt="${lacreLabelCurto(key)}" /></div>` : ''}
+        </div>
+      </div>
+    </div>`;
 }
 
 function restoreIPSelections(stopIdx) {
@@ -1402,11 +1426,109 @@ function setIP(btn) {
   const stopIdx = parseInt(btn.dataset.stop);
   const pid = parseInt(btn.dataset.pid);
   const val = btn.dataset.val;
-  const already = state.stops[stopIdx].items[pid] === val;
-  state.stops[stopIdx].items[pid] = already ? '' : val;
+  const stop = state.stops[stopIdx];
+  const already = stop.items[pid] === val;
+  stop.items[pid] = already ? '' : val;
   const siblings = document.querySelectorAll(`[data-stop="${stopIdx}"][data-pid="${pid}"]`);
   siblings.forEach(b => b.classList.remove('selected'));
   if (!already) btn.classList.add('selected');
+
+  // Mostra/oculta a caixa de motivo da reprova
+  const box = document.getElementById(`reprova-${stopIdx}-${pid}`);
+  if (box) {
+    const isR = stop.items[pid] === 'R';
+    box.style.display = isR ? '' : 'none';
+    if (!isR) {
+      if (stop.reprovaReasons) delete stop.reprovaReasons[pid];
+      const ta = document.getElementById(`f-reprova-${stopIdx}-${pid}`);
+      if (ta) ta.value = '';
+    }
+  }
+}
+
+function onReprovaInput(stopIdx, pid, el) {
+  if (!state.stops[stopIdx].reprovaReasons) state.stops[stopIdx].reprovaReasons = {};
+  state.stops[stopIdx].reprovaReasons[pid] = el.value;
+}
+
+function setHouveAlteracao(stopIdx, val) {
+  const stop = state.stops[stopIdx];
+  stop.houveAlteracao = val;
+  document.querySelectorAll('#alteracao-grid .motivo-item').forEach((el, i) => {
+    el.classList.toggle('selected', (i === 0) === val);
+  });
+
+  if (val === false) {
+    // Copia respostas da parada anterior de mesmo tipo; exige novas fotos de lacre
+    const prev = previousStopSameType(stopIdx);
+    if (prev) {
+      stop.items          = JSON.parse(JSON.stringify(prev.items || {}));
+      stop.reprovaReasons = JSON.parse(JSON.stringify(prev.reprovaReasons || {}));
+    }
+    stop.lacrePhotos = {}; // novas fotos obrigatórias
+  } else if (val === true) {
+    // Refazer: limpa respostas para novo preenchimento
+    const cfg = FORMS_CONFIG[stop.stopFormType || state.formType];
+    const items = {}; cfg.pontos.forEach(p => { items[p.id] = ''; });
+    stop.items = items;
+    stop.reprovaReasons = {};
+    stop.lacrePhotos = {};
+  }
+  renderStep(); // re-renderiza para refletir blocos visíveis e fotos
+}
+
+// Encontra a parada anterior (índice menor) do mesmo tipo de formulário
+function previousStopSameType(stopIdx) {
+  const type = state.stops[stopIdx].stopFormType || state.formType;
+  for (let i = stopIdx - 1; i >= 0; i--) {
+    const t = state.stops[i].stopFormType || state.formType;
+    if (t === type) return state.stops[i];
+  }
+  return null;
+}
+
+// Comprime a imagem no cliente antes de guardar/enviar
+function compressImage(file, maxDim = 1280, quality = 0.6) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else if (height > maxDim)             { width = Math.round(width * maxDim / height);  height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onLacrePhoto(stopIdx, key, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await compressImage(file);
+    if (!state.stops[stopIdx].lacrePhotos) state.stops[stopIdx].lacrePhotos = {};
+    state.stops[stopIdx].lacrePhotos[key] = dataUrl;
+    // Atualiza preview e status do cartão
+    const prev = document.getElementById(`lacre-preview-${stopIdx}-${key}`);
+    if (prev) prev.innerHTML = `<div class="photo-thumb-wrap"><img src="${dataUrl}" class="photo-thumb" alt="${lacreLabelCurto(key)}" /></div>`;
+    const card = document.getElementById(`lacre-card-${stopIdx}-${key}`);
+    if (card) {
+      const num = card.querySelector('.ip-num');
+      if (num) { num.textContent = '✓'; num.style.background = 'var(--success-light)'; num.style.color = 'var(--success)'; }
+    }
+  } catch (_) {
+    flashError('Não foi possível processar a foto');
+  }
+  input.value = '';
 }
 
 function saveStop(stopIdx) {
@@ -1420,18 +1542,8 @@ function renderStepFinal() {
   const dateStr = dt.toLocaleDateString('pt-BR');
   const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return `
-    <div class="step-label">Etapa 7</div>
-    <div class="step-title">Fotos e Finalização</div>
-    <div class="form-group">
-      <label class="form-label">Fotos da Vistoria</label>
-      <div class="photo-area">
-        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this)" />
-        <div class="ph-icon">📷</div>
-        <div class="ph-text">Tirar foto / Galeria</div>
-        <div class="ph-sub">Toque para capturar ou selecionar</div>
-      </div>
-      <div class="photos-preview" id="photos-preview"></div>
-    </div>
+    <div class="step-label">Finalização</div>
+    <div class="step-title">Finalização</div>
     <div class="form-group">
       <label class="form-label">Nome do Responsável pela Inspeção <span class="req">*</span></label>
       <input class="form-input" id="f-resp-final" type="text" placeholder="Assinatura / nome do responsável" value="${escHtml(state.responsavel)}" />
@@ -1509,15 +1621,38 @@ function validateStep() {
   }
   if (step.startsWith('stop-')) {
     const si = parseInt(step.split('-')[1]);
-    if (si > 0 && !state.stops[si].motivo) {
+    const stop = state.stops[si];
+    const stopCfg = FORMS_CONFIG[stop.stopFormType || state.formType];
+
+    if (si > 0 && !stop.motivo) {
       const sel = document.querySelector('#motivo-grid .motivo-item.selected');
       if (!sel) { flashError('Selecione o motivo da parada'); return false; }
     }
-    const stop = state.stops[si];
-    const stopCfg = FORMS_CONFIG[stop.stopFormType || state.formType];
-    const unanswered = stopCfg.pontos.filter(p => !stop.items[p.id]);
-    if (unanswered.length > 0) {
-      flashError(`Responda todos os ${stopCfg.pontos.length} pontos de verificação`); return false;
+
+    // Paradas: precisa responder se houve alteração
+    if (si > 0 && stop.houveAlteracao === null) {
+      flashError('Responda se houve alteração nos itens'); return false;
+    }
+
+    // Pontos de verificação — só exige preenchimento se refazendo (ou partida)
+    const preencheChecklist = si === 0 || stop.houveAlteracao === true;
+    if (preencheChecklist) {
+      const unanswered = stopCfg.pontos.filter(p => !stop.items[p.id]);
+      if (unanswered.length > 0) {
+        flashError(`Responda todos os ${stopCfg.pontos.length} pontos de verificação`); return false;
+      }
+      // Motivo obrigatório em cada ponto reprovado
+      const semMotivo = stopCfg.pontos.filter(p => stop.items[p.id] === 'R' && !((stop.reprovaReasons || {})[p.id] || '').trim());
+      if (semMotivo.length > 0) {
+        flashError('Informe o motivo de cada ponto reprovado'); return false;
+      }
+    }
+
+    // Fotos de lacre obrigatórias (sempre)
+    const lacres = lacresDoForm(stop.stopFormType || state.formType);
+    const semFoto = lacres.filter(l => !((stop.lacrePhotos || {})[l.key]));
+    if (semFoto.length > 0) {
+      flashError('Tire a foto de todos os lacres'); return false;
     }
   }
   if (step === 'final') {
@@ -1544,47 +1679,6 @@ function flashError(msg) {
 }
 
 /* ═══════════════════════════════════════
-   FOTOS
-═══════════════════════════════════════ */
-function addPhotos(input) {
-  Array.from(input.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      photos.push({ name: file.name, src: e.target.result });
-      renderPhotos();
-      updatePhotoFabCount();
-    };
-    reader.readAsDataURL(file);
-  });
-  // Limpa input para permitir re-selecionar a mesma foto
-  input.value = '';
-}
-
-function updatePhotoFabCount() {
-  const badge = document.getElementById('photo-fab-count');
-  if (!badge) return;
-  if (photos.length > 0) {
-    badge.textContent = photos.length;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
-function renderPhotos() {
-  const c = document.getElementById('photos-preview');
-  if (!c) return;
-  c.innerHTML = photos.map((p, i) => `
-    <div class="photo-thumb-wrap">
-      <img src="${p.src}" class="photo-thumb" alt="${p.name}" />
-      <button class="photo-remove" onclick="removePhoto(${i})">×</button>
-    </div>
-  `).join('');
-}
-
-function removePhoto(i) { photos.splice(i, 1); renderPhotos(); updatePhotoFabCount(); }
-
-/* ═══════════════════════════════════════
    SUBMETER
 ═══════════════════════════════════════ */
 async function submitForm() {
@@ -1597,6 +1691,8 @@ async function submitForm() {
   const hasRep045 = stops045.some(s => !s.pulada && Object.values(s.items).some(v => v === 'R'));
   const hasRep046 = stops046.some(s => !s.pulada && Object.values(s.items).some(v => v === 'R'));
   const hasReprovado = hasRep045 || hasRep046;
+
+  const obsFinal = getVal('f-obs-final');
 
   const baseVistoria = {
     id: Date.now(),
@@ -1615,15 +1711,13 @@ async function submitForm() {
     lacreArmador: state.lacreArmador,
     lacreMC: state.lacreMC,
     lacreExportador: state.lacreExportador,
-    obs: getVal('f-obs-final'),
     dataInspecao: getVal('f-data-final'),
     horaInspecao: getVal('f-hora-final'),
-    photos: photos.length,
     hasReprovado: hasReprovado
   };
 
   // Salva localmente e limpa viagem ativa
-  vistorias.push({ ...baseVistoria, formType: state.formType, formCodigo: FORMS_CONFIG[state.formType].codigo, stops: allStops });
+  vistorias.push({ ...baseVistoria, obs: obsFinal, formType: state.formType, formCodigo: FORMS_CONFIG[state.formType].codigo, stops: allStops });
   localStorage.setItem('vistorias_mc', JSON.stringify(vistorias));
   activeTrip = null;
   localStorage.removeItem('activeTrip_mc');
@@ -1648,8 +1742,6 @@ async function submitForm() {
 
   goTo('success');
 
-  document.getElementById('download-area-045').style.display = 'none';
-  document.getElementById('download-area-046').style.display = 'none';
   document.getElementById('report-error').style.display = 'none';
   document.getElementById('report-loading').style.display = 'block';
 
@@ -1657,21 +1749,33 @@ async function submitForm() {
   const promises = [];
 
   if (stops045.length > 0) {
+    const obs045 = combinarObs(obsFinal, buildReprovaObs(stops045, 'rmc045'));
     promises.push(
       fetch(base + '/api/vistorias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ ...baseVistoria, formType: 'rmc045', formCodigo: 'RMC-045', stops: stops045, hasReprovado: hasRep045 })
+        body: JSON.stringify({
+          ...baseVistoria, formType: 'rmc045', formCodigo: 'RMC-045',
+          stops: stripStops(stops045), obs: obs045,
+          fotos: collectFotos(stops045), photos: collectFotos(stops045).length,
+          hasReprovado: hasRep045
+        })
       }).then(r => r.json()).then(data => ({ _tipo: 'rmc045', ...data }))
     );
   }
 
   if (stops046.length > 0) {
+    const obs046 = combinarObs(obsFinal, buildReprovaObs(stops046, 'rmc046'));
     promises.push(
       fetch(base + '/api/vistorias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ ...baseVistoria, formType: 'rmc046', formCodigo: 'RMC-046', stops: stops046, hasReprovado: hasRep046 })
+        body: JSON.stringify({
+          ...baseVistoria, formType: 'rmc046', formCodigo: 'RMC-046',
+          stops: stripStops(stops046), obs: obs046,
+          fotos: collectFotos(stops046), photos: collectFotos(stops046).length,
+          hasReprovado: hasRep046
+        })
       }).then(r => r.json()).then(data => ({ _tipo: 'rmc046', ...data }))
     );
   }
@@ -1679,35 +1783,60 @@ async function submitForm() {
   try {
     const results = await Promise.all(promises);
     document.getElementById('report-loading').style.display = 'none';
-
-    let algumErro = false;
-    results.forEach(data => {
-      if (!data.ok) { algumErro = true; return; }
-      const areaId  = data._tipo === 'rmc045' ? 'download-area-045' : 'download-area-046';
-      const area    = document.getElementById(areaId);
-      area.style.display = 'block';
-      const wordBtn = area.querySelector(`.dl-word-${data._tipo === 'rmc045' ? '045' : '046'}`);
-      const pdfBtn  = area.querySelector(`.dl-pdf-${data._tipo  === 'rmc045' ? '045' : '046'}`);
-      wordBtn.href = base + data.wordUrl;
-      wordBtn.setAttribute('download', data.wordFilename);
-      if (data.pdfUrl) {
-        pdfBtn.href = base + data.pdfUrl;
-        pdfBtn.setAttribute('download', data.pdfFilename);
-        pdfBtn.style.display = 'flex';
-      }
-    });
-
-    if (algumErro) throw new Error('Erro ao gerar um dos relatórios');
+    if (results.some(d => !d.ok)) throw new Error('Erro ao registrar um dos relatórios');
   } catch (err) {
     document.getElementById('report-loading').style.display = 'none';
     const errEl = document.getElementById('report-error');
     if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      errEl.innerHTML = '⚠️ <strong>Sem conexão com o servidor.</strong> A vistoria foi salva no dispositivo mas os relatórios não puderam ser gerados. Tente novamente quando houver conexão.';
+      errEl.innerHTML = '⚠️ <strong>Sem conexão com o servidor.</strong> O check list foi salvo no dispositivo mas não pôde ser enviado ao gestor. Tente novamente quando houver conexão.';
     } else {
-      errEl.innerHTML = '⚠️ <strong>Erro no servidor:</strong> ' + err.message + '<br><small style="opacity:.7">A vistoria foi salva localmente mas pode não ter chegado ao gestor. Entre em contato com o suporte.</small>';
+      errEl.innerHTML = '⚠️ <strong>Erro no servidor:</strong> ' + err.message + '<br><small style="opacity:.7">O check list foi salvo localmente mas pode não ter chegado ao gestor. Entre em contato com o suporte.</small>';
     }
     errEl.style.display = 'block';
   }
+}
+
+/* Monta as observações de reprova numeradas por ponto */
+function buildReprovaObs(stops, formType) {
+  const cfg = FORMS_CONFIG[formType];
+  const linhas = [];
+  let n = 0;
+  stops.forEach(s => {
+    if (s.pulada) return;
+    cfg.pontos.forEach(p => {
+      if (s.items[p.id] === 'R') {
+        n++;
+        const motivo = ((s.reprovaReasons || {})[p.id] || '').trim() || '(sem motivo informado)';
+        linhas.push(`${n}. [${s.tipo}] Ponto ${p.id} - ${p.label}: ${motivo}`);
+      }
+    });
+  });
+  if (!linhas.length) return '';
+  return 'MOTIVOS DE REPROVA:\n' + linhas.join('\n');
+}
+
+function combinarObs(obsFinal, reprovaObs) {
+  const partes = [];
+  if (obsFinal && obsFinal.trim()) partes.push(obsFinal.trim());
+  if (reprovaObs) partes.push(reprovaObs);
+  return partes.join('\n\n');
+}
+
+/* Remove as fotos (dataURL) de dentro dos stops antes de enviar como JSON */
+function stripStops(stops) {
+  return stops.map(s => { const { lacrePhotos, ...rest } = s; return rest; });
+}
+
+/* Coleta as fotos de lacre de cada parada para envio ao gestor */
+function collectFotos(stops) {
+  const fotos = [];
+  stops.forEach(s => {
+    if (s.pulada) return;
+    Object.entries(s.lacrePhotos || {}).forEach(([key, dataUrl]) => {
+      if (dataUrl) fotos.push({ lacre: key, lacreLabel: lacreLabelCurto(key), stopLabel: s.tipo, dataUrl });
+    });
+  });
+  return fotos;
 }
 
 /* ═══════════════════════════════════════
@@ -1716,17 +1845,6 @@ async function submitForm() {
 function renderHome() {
   const dateEl = document.getElementById('home-date');
   dateEl.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-
-  const hoje = vistorias.filter(v => {
-    const d = new Date(v.datetime), n = new Date();
-    return d.toDateString() === n.toDateString();
-  });
-  document.getElementById('vistorias-hoje').textContent = hoje.length + ' vistoria' + (hoje.length !== 1 ? 's' : '');
-
-  if (vistorias.length > 0) {
-    const last = vistorias[vistorias.length - 1];
-    document.getElementById('last-vistoria-text').textContent = formatTime(new Date(last.datetime));
-  }
 
   // ── Viagem em andamento ──
   const activeSec   = document.getElementById('active-trip-section');
@@ -1755,96 +1873,6 @@ function renderHome() {
     activeSec.style.display = 'none';
     novaSec.style.display   = '';
   }
-
-  // ── Recentes ──
-  const recentEl = document.getElementById('recent-list');
-  const recent = [...vistorias].reverse().slice(0, 3);
-  if (!recent.length) {
-    recentEl.innerHTML = '<div class="empty-recent">Nenhuma vistoria registrada ainda.</div>';
-    return;
-  }
-  recentEl.innerHTML = recent.map(v => `
-    <div class="recent-item" onclick="goTo('history')">
-      <div class="recent-dot ${v.hasReprovado ? 'warn' : 'ok'}"></div>
-      <div style="flex:1">
-        <div class="recent-title">${v.motorista} · ${v.placaVeiculo}</div>
-        <div class="recent-sub">${v.localColeta} → ${v.destino}</div>
-      </div>
-      <div class="recent-time">${formatTime(new Date(v.datetime))}</div>
-    </div>
-  `).join('');
-}
-
-/* ═══════════════════════════════════════
-   HISTÓRICO
-═══════════════════════════════════════ */
-async function renderHistory() {
-  const c = document.getElementById('history-list');
-  c.innerHTML = '<div class="empty-recent" style="margin-top:40px">⏳ Carregando histórico...</div>';
-  try {
-    const base = window.SERVER_URL || '';
-    const res  = await fetch(`${base}/api/vistorias/minhas`, { headers: authHeader() });
-    if (!res.ok) throw new Error('Erro ' + res.status);
-    const lista = await res.json();
-
-    if (!lista.length) {
-      c.innerHTML = '<div class="empty-recent" style="margin-top:40px">Nenhuma vistoria registrada ainda.</div>';
-      return;
-    }
-
-    c.innerHTML = lista.map((v, i) => {
-      const dt      = new Date(v.datetime);
-      const dateStr = dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const stops   = Array.isArray(v.stops) ? v.stops.filter(s => !s.pulada) : [];
-      const reprovados = stops.reduce((acc, s) => acc + Object.values(s.items || {}).filter(x => x === 'R').length, 0);
-      const statusBadge = v.status === 'approved'
-        ? '<span class="badge ok">✅ Aprovada pelo gestor</span>'
-        : v.status === 'rejected'
-          ? '<span class="badge warn">❌ Reprovada pelo gestor</span>'
-          : '<span class="badge" style="background:var(--gray-100);color:var(--gray-500)">⏳ Aguardando revisão</span>';
-
-      const downloadLinks = v.pdfUrl
-        ? `<a href="${v.pdfUrl}" target="_blank" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none">📄 Baixar PDF</a>`
-        : v.wordUrl
-          ? `<a href="${v.wordUrl}" target="_blank" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none">📝 Baixar Word</a>`
-          : '';
-
-      return `
-        <div class="history-item">
-          <div class="history-item-header" onclick="toggleHist('h${i}')">
-            <div class="history-status-dot ${v.has_reprovado ? 'warn' : 'ok'}"></div>
-            <div class="history-item-info">
-              <div class="history-item-title">${escHtml(v.motorista_nome || '')} · ${escHtml(v.placa_veiculo || '')}</div>
-              <div class="history-item-sub">${escHtml(v.form_codigo || v.form_type || '')} · ${escHtml(v.local_coleta || '')} → ${escHtml(v.destino || '')}</div>
-            </div>
-            <div class="history-item-time">${dateStr}</div>
-          </div>
-          <div class="history-item-body" id="h${i}">
-            <div class="history-field"><span class="hk">Responsável</span><span class="hv">${escHtml(v.responsavel || '—')}</span></div>
-            <div class="history-field"><span class="hk">CPF Motorista</span><span class="hv">${escHtml(v.cpf || '—')}</span></div>
-            ${v.num_container ? `<div class="history-field"><span class="hk">N° Container</span><span class="hv">${escHtml(v.num_container)}</span></div>` : ''}
-            ${v.lacre_armador ? `<div class="history-field"><span class="hk">Lacres</span><span class="hv">Armador: ${escHtml(v.lacre_armador)} · MC: ${escHtml(v.lacre_mc||'')} · Exportador: ${escHtml(v.lacre_exportador||'')}</span></div>` : ''}
-            <div class="history-field"><span class="hk">Paradas</span><span class="hv">${stops.length} parada(s)</span></div>
-            <div class="history-field"><span class="hk">Itens reprovados</span><span class="hv" style="color:${reprovados > 0 ? 'var(--danger)' : 'inherit'}">${reprovados > 0 ? reprovados + ' item(ns) reprovado(s)' : 'Nenhum'}</span></div>
-            ${v.obs ? `<div class="history-field"><span class="hk">Obs. motorista</span><span class="hv">${escHtml(v.obs)}</span></div>` : ''}
-            ${v.obs_gestor ? `<div class="history-field"><span class="hk">Obs. gestor</span><span class="hv" style="color:var(--primary)">${escHtml(v.obs_gestor)}</span></div>` : ''}
-            <div class="mt-12" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-              ${statusBadge}
-              <span class="badge ${v.has_reprovado ? 'warn' : 'ok'}">${v.has_reprovado ? '⚠️ Itens Reprovados' : '✅ Tudo Aprovado'}</span>
-              ${downloadLinks}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    c.innerHTML = `<div class="empty-recent" style="margin-top:40px;color:var(--danger)">Erro ao carregar histórico: ${e.message}</div>`;
-  }
-}
-
-function toggleHist(id) {
-  const b = document.getElementById(id);
-  if (b) b.classList.toggle('open');
 }
 
 /* ═══════════════════════════════════════

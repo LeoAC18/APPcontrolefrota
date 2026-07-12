@@ -8,7 +8,7 @@ const FORMS = {
   rmc045: {
     titulo: 'CHECKLIST DE SEGURANÇA — TRANSPORTE RODOVIÁRIO',
     codigo: 'RMC-045-CL-TR-SC-R05',
-    respLabel: 'Nome Completo do Responsável pela Vistoria',
+    respLabel: 'Nome Completo do Responsável pela Inspeção',
     pontos: [
       'Para-Choques',
       'Motor / Filtro de Ar',
@@ -89,7 +89,7 @@ async function gerarPdf(vistoria) {
   }
 
   return new Promise((resolve, reject) => {
-    const doc  = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true });
+    const doc  = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true, bufferPages: true });
     const bufs = [];
     doc.on('data', b => bufs.push(b));
     doc.on('end',  () => resolve(Buffer.concat(bufs)));
@@ -192,11 +192,16 @@ async function gerarPdf(vistoria) {
         ['Max. Gross (kg)', vistoria.maxGross ? String(vistoria.maxGross) : '-'],
       );
     }
-    identRows.push(
-      ['Lacre - Armador',          vistoria.lacreArmador    || 'Nao informado'],
-      ['Lacre - MC Transportes',   vistoria.lacreMC         || 'Nao informado'],
-      ['Lacre - Exportador',       vistoria.lacreExportador || 'Nao informado'],
-    );
+    if (vistoria.formType === 'rmc046') {
+      // Container em FCL — apenas o lacre da MC Transportes
+      identRows.push(['Lacre - MC Transportes', vistoria.lacreMC || 'Nao informado']);
+    } else {
+      identRows.push(
+        ['Lacre - Armador',          vistoria.lacreArmador    || 'Nao informado'],
+        ['Lacre - MC Transportes',   vistoria.lacreMC         || 'Nao informado'],
+        ['Lacre - Exportador',       vistoria.lacreExportador || 'Nao informado'],
+      );
+    }
 
     for (const [lbl, val] of identRows) {
       check(ID_H);
@@ -367,6 +372,15 @@ async function gerarPdf(vistoria) {
          `Fim de viagem — ${vistoria.responsavel || ''} · ${vistoria.dataInspecao || ''} · ${vistoria.horaInspecao || ''}`,
          MARGIN, Y, { width: CW, align: 'center' }
        );
+
+    /* ── NUMERAÇÃO DE PÁGINAS (1, 2, 3, ...) ── */
+    const range = doc.bufferedPageRange(); // { start, count }
+    for (let i = 0; i < range.count; i++) {
+      doc.switchToPage(range.start + i);
+      doc.font('Helvetica').fontSize(8).fillColor(C.mutedFg)
+         .text(`Pagina ${i + 1} de ${range.count}`, MARGIN, PAGE_H - MARGIN + 12,
+               { width: CW, align: 'center' });
+    }
 
     doc.end();
   });

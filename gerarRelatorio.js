@@ -13,7 +13,7 @@ const FORMS = {
   rmc045: {
     titulo: 'CHECKLIST DE SEGURANÇA — TRANSPORTE RODOVIÁRIO',
     codigo: 'RMC-045-CL-TR-SC-R05',
-    respLabel: 'Nome Completo do Responsável pela Vistoria',
+    respLabel: 'Nome Completo do Responsável pela Inspeção',
     pontos: [
       'Para-Choques',
       'Motor / Filtro de Ar',
@@ -222,11 +222,16 @@ async function gerarWord(vistoria) {
       ['Max. Gross (kg)',  vistoria.maxGross],
     );
   }
-  identRows.push(
-    ['Lacre — Armador',           vistoria.lacreArmador || 'Não informado'],
-    ['Lacre — MC Transportes',    vistoria.lacreMC      || 'Não informado'],
-    ['Lacre — Exportador',        vistoria.lacreExportador || 'Não informado'],
-  );
+  if (vistoria.formType === 'rmc046') {
+    // Container em FCL — apenas o lacre da MC Transportes
+    identRows.push(['Lacre — MC Transportes', vistoria.lacreMC || 'Não informado']);
+  } else {
+    identRows.push(
+      ['Lacre — Armador',           vistoria.lacreArmador || 'Não informado'],
+      ['Lacre — MC Transportes',    vistoria.lacreMC      || 'Não informado'],
+      ['Lacre — Exportador',        vistoria.lacreExportador || 'Não informado'],
+    );
+  }
 
   const identTable = new Table({
     width: { size: PW, type: WidthType.DXA },
