@@ -1175,26 +1175,42 @@ function renderStepCarga(cfg) {
     </div>
     ` : ''}
     <div class="divider"></div>
-    <div class="section-title">Lacres</div>
-    ${isContainer ? '' : `
-    <div class="form-group">
-      <label class="form-label">Lacre do Armador</label>
-      <input class="form-input" id="f-lacre-armador" type="text" placeholder="Número do lacre" />
-    </div>`}
-    <div class="form-group">
-      <label class="form-label">Lacre MC Transportes</label>
-      <input class="form-input" id="f-lacre-mc" type="text" placeholder="Número do lacre" />
-    </div>
-    ${isContainer ? '' : `
-    <div class="form-group">
-      <label class="form-label">Lacre do Exportador</label>
-      <input class="form-input" id="f-lacre-exportador" type="text" placeholder="Número do lacre" />
-    </div>`}
-    <div class="info-box" style="margin-top:4px;margin-bottom:0">
+    <div class="section-title">Lacres — número e foto</div>
+    <div class="info-box" style="margin-bottom:12px">
       <span class="ib-icon">📷</span>
-      <span>A <strong>foto de cada lacre</strong> será solicitada e é obrigatória na etapa de inspeção (checklist).</span>
+      <span>Informe o <strong>número</strong> e tire a <strong>foto</strong> de cada lacre. A foto é obrigatória para avançar.</span>
     </div>
+    ${lacresDoForm(state.formType).map(l => renderLacreCargaBlock(l.key)).join('')}
   `;
+}
+
+/* Cartão de lacre na etapa Carga: número + foto (partida, stop 0) */
+function renderLacreCargaBlock(key) {
+  const src = (state.stops[0].lacrePhotos || {})[key] || '';
+  const has = !!src;
+  return `
+    <div class="ip-card" id="lacre-card-0-${key}" style="margin-bottom:12px">
+      <div class="ip-header">
+        <div class="ip-num" style="background:${has ? 'var(--success-light)' : 'var(--danger-light)'};color:${has ? 'var(--success)' : 'var(--danger)'}">${has ? '✓' : '!'}</div>
+        <div class="ip-label">${lacreLabelCurto(key)}</div>
+      </div>
+      <div style="padding:0 14px 12px">
+        <div class="form-group" style="margin-bottom:10px">
+          <label class="form-label">Número do lacre</label>
+          <input class="form-input" id="f-lacre-${key}" type="text" placeholder="Número do lacre" />
+        </div>
+        <label class="photo-area" style="display:block;padding:14px">
+          <input type="file" accept="image/*" capture="environment" style="display:none"
+                 onchange="onLacrePhoto(0, '${key}', this)" />
+          <div class="ph-icon">📷</div>
+          <div class="ph-text">${has ? 'Trocar foto do lacre' : 'Tirar foto do lacre'}</div>
+          <div class="ph-sub">Toque para capturar</div>
+        </label>
+        <div id="lacre-preview-0-${key}" class="photos-preview">
+          ${has ? `<div class="photo-thumb-wrap"><img src="${src}" class="photo-thumb" alt="${lacreLabelCurto(key)}" /></div>` : ''}
+        </div>
+      </div>
+    </div>`;
 }
 
 function restoreCarga() {
@@ -1341,13 +1357,13 @@ function renderStepStop(cfg, stopIdx) {
       </div>
     </div>`;
 
-  // Seção de fotos dos lacres (sempre visível na parada)
-  const lacresSectionHtml = `
+  // Seção de fotos dos lacres — só nas paradas (na partida as fotos são tiradas na etapa Carga)
+  const lacresSectionHtml = isPartida ? '' : `
     <div class="divider"></div>
     <div class="section-title">Fotos dos Lacres (obrigatório)</div>
     <div class="info-box" style="margin-bottom:12px">
       <span class="ib-icon">📷</span>
-      <span>Tire uma foto de cada lacre nesta ${isPartida ? 'partida' : 'parada'}. Sem as fotos não é possível avançar.</span>
+      <span>Tire uma nova foto de cada lacre nesta parada. Sem as fotos não é possível avançar.</span>
     </div>
     ${lacresPhotoHtml}`;
 
@@ -1618,6 +1634,12 @@ function validateStep() {
     if (state.formType === 'rmc046' && !getVal('f-container')) {
       flashError('Informe o número do container'); return false;
     }
+    // Fotos dos lacres da partida são tiradas aqui
+    const lacres = lacresDoForm(state.formType);
+    const semFoto = lacres.filter(l => !((state.stops[0].lacrePhotos || {})[l.key]));
+    if (semFoto.length > 0) {
+      flashError('Tire a foto de todos os lacres'); return false;
+    }
   }
   if (step.startsWith('stop-')) {
     const si = parseInt(step.split('-')[1]);
@@ -1648,11 +1670,13 @@ function validateStep() {
       }
     }
 
-    // Fotos de lacre obrigatórias (sempre)
-    const lacres = lacresDoForm(stop.stopFormType || state.formType);
-    const semFoto = lacres.filter(l => !((stop.lacrePhotos || {})[l.key]));
-    if (semFoto.length > 0) {
-      flashError('Tire a foto de todos os lacres'); return false;
+    // Fotos de lacre: nas paradas (na partida foram tiradas na etapa Carga)
+    if (si > 0) {
+      const lacres = lacresDoForm(stop.stopFormType || state.formType);
+      const semFoto = lacres.filter(l => !((stop.lacrePhotos || {})[l.key]));
+      if (semFoto.length > 0) {
+        flashError('Tire a foto de todos os lacres'); return false;
+      }
     }
   }
   if (step === 'final') {
