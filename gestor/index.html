@@ -613,6 +613,11 @@
     <span class="ni-badge warn" id="badge-vistorias">3</span>
   </button>
 
+  <div class="sidebar-section">Frota</div>
+  <button class="nav-item" onclick="navigate('frota', this)">
+    <span class="ni-icon">🚛</span> Gestão de Frota
+  </button>
+
   <div class="sidebar-section">Operação</div>
   <button class="nav-item" onclick="navigate('operacao', this)">
     <span class="ni-icon">🗺️</span> Em Operação
@@ -904,6 +909,62 @@
     </div>
 
 
+    <!-- ══ PAGE: GESTÃO DE FROTA ══ -->
+    <div class="page" id="page-frota">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Gestão de Frota</div>
+          <div class="section-sub">Cadastro de ANTT (empresa/CNPJ), cavalos e carretas</div>
+        </div>
+        <div class="gap-8" style="display:flex;gap:8px;align-items:center">
+          <button onclick="loadData()" class="btn btn-ghost btn-sm">↻ Atualizar</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div class="card" style="padding:14px 16px"><div style="font-size:12px;color:var(--gray-500)">Empresas / ANTT</div><div style="font-size:24px;font-weight:700" id="frota-count-empresas">0</div></div>
+        <div class="card" style="padding:14px 16px"><div style="font-size:12px;color:var(--gray-500)">Cavalos</div><div style="font-size:24px;font-weight:700" id="frota-count-veiculos">0</div></div>
+        <div class="card" style="padding:14px 16px"><div style="font-size:12px;color:var(--gray-500)">Carretas</div><div style="font-size:24px;font-weight:700" id="frota-count-carretas">0</div></div>
+      </div>
+
+      <!-- Empresas / ANTT -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Empresas / ANTT</span> <span style="color:var(--gray-400);font-size:12px">— base de todos os veículos</span></div>
+          <button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Adicionar ANTT</button>
+        </div>
+        <table>
+          <thead><tr><th>Empresa</th><th>CNPJ</th><th>ANTT</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="frota-empresas-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Cavalos -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Cavalos (veículos)</span></div>
+          <button class="btn btn-primary btn-sm" onclick="openVeiculo()">+ Adicionar Cavalo</button>
+        </div>
+        <table>
+          <thead><tr><th>Placa</th><th>Modelo</th><th>ANTT / empresa</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="frota-veiculos-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Carretas -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Carretas</span></div>
+          <button class="btn btn-primary btn-sm" onclick="openCarreta()">+ Adicionar Carreta</button>
+        </div>
+        <table>
+          <thead><tr><th>Placa</th><th>Modelo</th><th>ANTT / empresa</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+          <tbody id="frota-carretas-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+
     <!-- ══ PAGE: OPERAÇÃO ══ -->
     <div class="page" id="page-operacao">
       <div class="section-header">
@@ -1149,6 +1210,123 @@
 </div>
 
 
+<!-- ══ MODAL: EMPRESA / ANTT ══ -->
+<div class="modal-overlay" id="modal-empresa">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-empresa-title">Adicionar ANTT</div>
+      <button class="modal-close" onclick="closeModal('modal-empresa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome da empresa <span class="req">*</span></label>
+        <input class="form-control" id="e-nome" type="text" placeholder="Ex: MC Transportes" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">CNPJ <span class="req">*</span></label>
+          <input class="form-control" id="e-cnpj" type="text" placeholder="00.000.000/0000-00" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Registro ANTT <span class="req">*</span></label>
+          <input class="form-control" id="e-antt" type="text" placeholder="00000000" />
+        </div>
+      </div>
+      <div class="form-group" id="e-ativa-group" style="display:none">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="e-ativa">
+          <option value="true">Ativa</option>
+          <option value="false">Inativa</option>
+        </select>
+      </div>
+      <div id="e-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;background:var(--danger-light);padding:8px 12px;border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-empresa')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEmpresa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CAVALO (VEÍCULO) ══ -->
+<div class="modal-overlay" id="modal-veiculo">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-veiculo-title">Adicionar Cavalo</div>
+      <button class="modal-close" onclick="closeModal('modal-veiculo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Placa <span class="req">*</span></label>
+          <input class="form-control" id="v-placa" type="text" placeholder="ABC-1D23" style="text-transform:uppercase" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo</label>
+          <input class="form-control" id="v-modelo" type="text" placeholder="Scania R450" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ANTT responsável (empresa / CNPJ) <span class="req">*</span></label>
+        <select class="form-control" id="v-empresa"></select>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px">O cavalo herda o ANTT e o CNPJ da empresa selecionada.</div>
+      </div>
+      <div class="form-group" id="v-ativo-group" style="display:none">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="v-ativo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+      <div id="v-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;background:var(--danger-light);padding:8px 12px;border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-veiculo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVeiculo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CARRETA ══ -->
+<div class="modal-overlay" id="modal-carreta">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-carreta-title">Adicionar Carreta</div>
+      <button class="modal-close" onclick="closeModal('modal-carreta')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Placa <span class="req">*</span></label>
+          <input class="form-control" id="c-placa" type="text" placeholder="XYZ-9K12" style="text-transform:uppercase" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo</label>
+          <input class="form-control" id="c-modelo" type="text" placeholder="Randon SR BA" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ANTT responsável (empresa / CNPJ) <span class="req">*</span></label>
+        <select class="form-control" id="c-empresa"></select>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px">A carreta herda o ANTT e o CNPJ da empresa selecionada.</div>
+      </div>
+      <div class="form-group" id="c-ativo-group" style="display:none">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="c-ativo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+      <div id="c-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;background:var(--danger-light);padding:8px 12px;border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-carreta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCarreta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
@@ -1229,19 +1407,28 @@ async function checkGestorAuth() {
 let drivers   = [];
 let vistorias = [];
 let trips     = [];
+let empresas  = [];
+let veiculos  = [];
+let carretas  = [];
 
 let editingDriverId   = null;
 let deletingDriverId  = null;
 let currentVistoriaId = null;
 let editingVistoriaId = null;
 let currentFilter     = 'all';
+let editingEmpresaId  = null;
+let editingVeiculoId  = null;
+let editingCarretaId  = null;
 
 async function loadData() {
   try {
     const headers = gAuthHeader();
-    const [dRes, vRes] = await Promise.all([
+    const [dRes, vRes, eRes, veRes, caRes] = await Promise.all([
       fetch('/api/motoristas', { headers }),
       fetch('/api/vistorias',  { headers }),
+      fetch('/api/empresas',   { headers }),
+      fetch('/api/veiculos',   { headers }),
+      fetch('/api/carretas',   { headers }),
     ]);
     const dJson = await dRes.json();
     const vJson = await vRes.json();
@@ -1251,6 +1438,9 @@ async function loadData() {
 
     drivers   = dJson;
     vistorias = vJson;
+    if (eRes.ok)  empresas = await eRes.json();
+    if (veRes.ok) veiculos = await veRes.json();
+    if (caRes.ok) carretas = await caRes.json();
     // normaliza campos que o front espera
     vistorias.forEach(v => {
       if (!Array.isArray(v.avarias)) v.avarias = [];
@@ -1272,6 +1462,7 @@ async function loadData() {
       if (id === 'vistorias')  renderVistorias();
       if (id === 'operacao')   renderOperacao();
       if (id === 'dashboard')  renderDashboard();
+      if (id === 'frota')      renderFrota();
     }
   } catch (e) {
     console.error('Erro ao carregar dados da API:', e);
@@ -1301,8 +1492,8 @@ function renderDashboard() {
 /* ════════════════════════════════════════
    NAVIGATION
 ════════════════════════════════════════ */
-const pages = { dashboard:'Dashboard', motoristas:'Motoristas', vistorias:'Vistorias', operacao:'Operação' };
-const subs  = { dashboard:'Visão geral da frota', motoristas:'Gestão de motoristas', vistorias:'Registros de saída', operacao:'Acompanhamento em tempo real' };
+const pages = { dashboard:'Dashboard', motoristas:'Motoristas', vistorias:'Vistorias', frota:'Gestão de Frota', operacao:'Operação' };
+const subs  = { dashboard:'Visão geral da frota', motoristas:'Gestão de motoristas', vistorias:'Registros de saída', frota:'ANTT, cavalos e carretas', operacao:'Acompanhamento em tempo real' };
 
 function navigate(pageId, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1322,6 +1513,7 @@ function navigate(pageId, btn) {
   if (pageId === 'motoristas') renderDrivers();
   if (pageId === 'vistorias')  renderVistorias();
   if (pageId === 'operacao')   renderOperacao();
+  if (pageId === 'frota')      renderFrota();
 }
 
 /* ════════════════════════════════════════
@@ -1455,6 +1647,168 @@ function confirmDelete(id) {
       })
       .catch(() => alert('Erro ao excluir motorista.'));
   };
+}
+
+/* ════════════════════════════════════════
+   GESTÃO DE FROTA (ANTT / cavalos / carretas)
+════════════════════════════════════════ */
+function escFrota(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fVal(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function fErr(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.style.display = 'block'; }
+
+function renderFrota() {
+  document.getElementById('frota-count-empresas').textContent = empresas.length;
+  document.getElementById('frota-count-veiculos').textContent = veiculos.length;
+  document.getElementById('frota-count-carretas').textContent = carretas.length;
+
+  const emptyRow = txt => `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:16px">${txt}</td></tr>`;
+
+  document.getElementById('frota-empresas-tbody').innerHTML = empresas.length ? empresas.map(e => `
+    <tr>
+      <td style="font-weight:600">${escFrota(e.nome)}</td>
+      <td style="color:var(--gray-500)">${escFrota(e.cnpj)}</td>
+      <td>${escFrota(e.antt)}</td>
+      <td>${e.ativa === false ? '<span class="badge gray">Inativa</span>' : '<span class="badge ok">Ativa</span>'}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openEmpresa(${e.id})">✏️ Editar</button></td>
+    </tr>`).join('') : emptyRow('Nenhuma empresa cadastrada.');
+
+  document.getElementById('frota-veiculos-tbody').innerHTML = veiculos.length ? veiculos.map(v => `
+    <tr>
+      <td style="font-weight:600">${escFrota(v.placa)}</td>
+      <td style="color:var(--gray-500)">${escFrota(v.modelo || '—')}</td>
+      <td>${escFrota((v.antt || '—') + ' · ' + (v.empresa_nome || '—'))}</td>
+      <td>${v.ativo === false ? '<span class="badge gray">Inativo</span>' : '<span class="badge ok">Ativo</span>'}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openVeiculo(${v.id})">✏️ Editar</button></td>
+    </tr>`).join('') : emptyRow('Nenhum cavalo cadastrado.');
+
+  document.getElementById('frota-carretas-tbody').innerHTML = carretas.length ? carretas.map(c => `
+    <tr>
+      <td style="font-weight:600">${escFrota(c.placa)}</td>
+      <td style="color:var(--gray-500)">${escFrota(c.modelo || '—')}</td>
+      <td>${escFrota((c.antt || '—') + ' · ' + (c.empresa_nome || '—'))}</td>
+      <td>${c.ativo === false ? '<span class="badge gray">Inativo</span>' : '<span class="badge ok">Ativo</span>'}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openCarreta(${c.id})">✏️ Editar</button></td>
+    </tr>`).join('') : emptyRow('Nenhuma carreta cadastrada.');
+}
+
+function fillEmpresaSelect(selId, selectedId) {
+  const sel = document.getElementById(selId);
+  if (!empresas.length) {
+    sel.innerHTML = '<option value="">Cadastre uma empresa/ANTT primeiro</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Selecione a empresa (ANTT)...</option>' + empresas.map(e =>
+    `<option value="${e.id}" ${String(e.id) === String(selectedId) ? 'selected' : ''}>${escFrota(e.antt || '?')} — ${escFrota(e.nome)} · ${escFrota(e.cnpj)}</option>`
+  ).join('');
+}
+
+/* ── Empresa / ANTT ── */
+function openEmpresa(id) {
+  editingEmpresaId = id || null;
+  const e = id ? empresas.find(x => x.id === id) : null;
+  document.getElementById('modal-empresa-title').textContent = id ? 'Editar ANTT / empresa' : 'Adicionar ANTT';
+  document.getElementById('e-error').style.display = 'none';
+  document.getElementById('e-nome').value = e ? (e.nome || '') : '';
+  document.getElementById('e-cnpj').value = e ? (e.cnpj || '') : '';
+  document.getElementById('e-antt').value = e ? (e.antt || '') : '';
+  document.getElementById('e-ativa-group').style.display = id ? '' : 'none';
+  if (id) document.getElementById('e-ativa').value = (e && e.ativa === false) ? 'false' : 'true';
+  openModal('modal-empresa');
+}
+
+function saveEmpresa() {
+  const nome = fVal('e-nome'), cnpj = fVal('e-cnpj'), antt = fVal('e-antt');
+  if (!nome || !cnpj || !antt) { fErr('e-error', 'Preencha nome, CNPJ e ANTT.'); return; }
+  const data = { nome, cnpj, antt };
+  if (editingEmpresaId) data.ativa = document.getElementById('e-ativa').value === 'true';
+  const method = editingEmpresaId ? 'PUT' : 'POST';
+  const url    = editingEmpresaId ? `/api/empresas/${editingEmpresaId}` : '/api/empresas';
+  fetch(url, { method, headers: { 'Content-Type': 'application/json', ...gAuthHeader() }, body: JSON.stringify(data) })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Erro ao salvar'); return j; })
+    .then(saved => {
+      if (editingEmpresaId) { const i = empresas.findIndex(x => x.id === editingEmpresaId); if (i !== -1) empresas[i] = saved; }
+      else empresas.push(saved);
+      closeModal('modal-empresa');
+      renderFrota();
+    })
+    .catch(e => fErr('e-error', e.message));
+}
+
+/* ── Cavalo (veículo) ── */
+function openVeiculo(id) {
+  editingVeiculoId = id || null;
+  const v = id ? veiculos.find(x => x.id === id) : null;
+  document.getElementById('modal-veiculo-title').textContent = id ? 'Editar Cavalo' : 'Adicionar Cavalo';
+  document.getElementById('v-error').style.display = 'none';
+  document.getElementById('v-placa').value  = v ? (v.placa || '') : '';
+  document.getElementById('v-modelo').value = v ? (v.modelo || '') : '';
+  fillEmpresaSelect('v-empresa', v ? v.empresa_id : '');
+  document.getElementById('v-ativo-group').style.display = id ? '' : 'none';
+  if (id) document.getElementById('v-ativo').value = (v && v.ativo === false) ? 'false' : 'true';
+  openModal('modal-veiculo');
+}
+
+function saveVeiculo() {
+  const placa = fVal('v-placa'), modelo = fVal('v-modelo'), empresa_id = document.getElementById('v-empresa').value;
+  if (!placa)      { fErr('v-error', 'Informe a placa do cavalo.'); return; }
+  if (!empresa_id) { fErr('v-error', 'Selecione a empresa / ANTT responsável.'); return; }
+  const data = { placa, modelo, empresa_id: Number(empresa_id) };
+  if (editingVeiculoId) data.ativo = document.getElementById('v-ativo').value === 'true';
+  const method = editingVeiculoId ? 'PUT' : 'POST';
+  const url    = editingVeiculoId ? `/api/veiculos/${editingVeiculoId}` : '/api/veiculos';
+  fetch(url, { method, headers: { 'Content-Type': 'application/json', ...gAuthHeader() }, body: JSON.stringify(data) })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Erro ao salvar'); return j; })
+    .then(saved => {
+      const emp = empresas.find(x => String(x.id) === String(data.empresa_id));
+      saved.empresa_nome = emp ? emp.nome : null;
+      saved.antt = emp ? emp.antt : null;
+      saved.cnpj = emp ? emp.cnpj : null;
+      if (editingVeiculoId) { const i = veiculos.findIndex(x => x.id === editingVeiculoId); if (i !== -1) veiculos[i] = saved; }
+      else veiculos.push(saved);
+      closeModal('modal-veiculo');
+      renderFrota();
+    })
+    .catch(e => fErr('v-error', e.message));
+}
+
+/* ── Carreta ── */
+function openCarreta(id) {
+  editingCarretaId = id || null;
+  const c = id ? carretas.find(x => x.id === id) : null;
+  document.getElementById('modal-carreta-title').textContent = id ? 'Editar Carreta' : 'Adicionar Carreta';
+  document.getElementById('c-error').style.display = 'none';
+  document.getElementById('c-placa').value  = c ? (c.placa || '') : '';
+  document.getElementById('c-modelo').value = c ? (c.modelo || '') : '';
+  fillEmpresaSelect('c-empresa', c ? c.empresa_id : '');
+  document.getElementById('c-ativo-group').style.display = id ? '' : 'none';
+  if (id) document.getElementById('c-ativo').value = (c && c.ativo === false) ? 'false' : 'true';
+  openModal('modal-carreta');
+}
+
+function saveCarreta() {
+  const placa = fVal('c-placa'), modelo = fVal('c-modelo'), empresa_id = document.getElementById('c-empresa').value;
+  if (!placa)      { fErr('c-error', 'Informe a placa da carreta.'); return; }
+  if (!empresa_id) { fErr('c-error', 'Selecione a empresa / ANTT responsável.'); return; }
+  const data = { placa, modelo, empresa_id: Number(empresa_id) };
+  if (editingCarretaId) data.ativo = document.getElementById('c-ativo').value === 'true';
+  const method = editingCarretaId ? 'PUT' : 'POST';
+  const url    = editingCarretaId ? `/api/carretas/${editingCarretaId}` : '/api/carretas';
+  fetch(url, { method, headers: { 'Content-Type': 'application/json', ...gAuthHeader() }, body: JSON.stringify(data) })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Erro ao salvar'); return j; })
+    .then(saved => {
+      const emp = empresas.find(x => String(x.id) === String(data.empresa_id));
+      saved.empresa_nome = emp ? emp.nome : null;
+      saved.antt = emp ? emp.antt : null;
+      saved.cnpj = emp ? emp.cnpj : null;
+      if (editingCarretaId) { const i = carretas.findIndex(x => x.id === editingCarretaId); if (i !== -1) carretas[i] = saved; }
+      else carretas.push(saved);
+      closeModal('modal-carreta');
+      renderFrota();
+    })
+    .catch(e => fErr('c-error', e.message));
 }
 
 /* ════════════════════════════════════════
