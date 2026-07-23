@@ -621,7 +621,7 @@
   <div class="sidebar-section">Operação</div>
   <button class="nav-item" onclick="navigate('operacao', this)">
     <span class="ni-icon">🗺️</span> Em Operação
-    <span class="ni-badge" id="badge-operacao">5</span>
+    <span class="ni-badge" id="badge-operacao">0</span>
   </button>
 
   <div class="sidebar-footer">
@@ -653,7 +653,7 @@
     </div>
     <div class="topbar-right">
       <span class="topbar-date" id="topbar-date"></span>
-      <span class="topbar-badge" id="topbar-alert" onclick="navigate('vistorias', null)">3 pendências</span>
+      <span class="topbar-badge" id="topbar-alert" onclick="navigate('vistorias', null)">—</span>
     </div>
   </div>
 
@@ -666,23 +666,23 @@
       <div class="kpi-row">
         <div class="kpi-card blue">
           <div class="kpi-label">Motoristas ativos</div>
-          <div class="kpi-value">8</div>
-          <div class="kpi-sub">5 em viagem agora</div>
+          <div class="kpi-value" id="kpi-motoristas">0</div>
+          <div class="kpi-sub" id="kpi-motoristas-sub">0 em viagem agora</div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-label">Vistorias hoje</div>
-          <div class="kpi-value">6</div>
-          <div class="kpi-sub">3 aprovadas · 3 pendentes</div>
+          <div class="kpi-label">Check Lists hoje</div>
+          <div class="kpi-value" id="kpi-vistorias">0</div>
+          <div class="kpi-sub" id="kpi-vistorias-sub">0 aprovados · 0 pendentes</div>
         </div>
         <div class="kpi-card yellow">
-          <div class="kpi-label">Ocorrências abertas</div>
-          <div class="kpi-value">4</div>
-          <div class="kpi-sub">2 graves · 2 leves</div>
+          <div class="kpi-label">Aguardando aprovação</div>
+          <div class="kpi-value" id="kpi-pendentes">0</div>
+          <div class="kpi-sub" id="kpi-pendentes-sub">Nenhum pendente</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">Veículos c/ avaria</div>
-          <div class="kpi-value">2</div>
-          <div class="kpi-sub">Manutenção solicitada</div>
+          <div class="kpi-label">Com item reprovado</div>
+          <div class="kpi-value" id="kpi-reprovados">0</div>
+          <div class="kpi-sub" id="kpi-reprovados-sub">Nenhuma ocorrência</div>
         </div>
       </div>
 
@@ -697,41 +697,7 @@
             <button class="btn btn-ghost btn-sm" onclick="navigate('vistorias', null)">Ver todos</button>
           </div>
 
-          <div class="alert-card danger" onclick="navigate('vistorias', null)">
-            <div class="alert-icon">🔴</div>
-            <div style="flex:1">
-              <div class="alert-title">Barulho grave no motor — Carlos S.</div>
-              <div class="alert-sub">Caminhão ABC-1D23 · Rota: SP → Campinas · Urgência GRAVE</div>
-            </div>
-            <div class="alert-time">08:14</div>
-          </div>
-
-          <div class="alert-card danger" onclick="navigate('vistorias', null)">
-            <div class="alert-icon">🔴</div>
-            <div style="flex:1">
-              <div class="alert-title">Avaria nos pneus — Roberto M.</div>
-              <div class="alert-sub">Caminhão XYZ-9K12 · Rota: Belo Horizonte → Rio</div>
-            </div>
-            <div class="alert-time">07:50</div>
-          </div>
-
-          <div class="alert-card warn" onclick="navigate('vistorias', null)">
-            <div class="alert-icon">🟡</div>
-            <div style="flex:1">
-              <div class="alert-title">Vibração no volante — José A.</div>
-              <div class="alert-sub">Caminhão DEF-4T56 · Rota: Ribeirão Preto → SP</div>
-            </div>
-            <div class="alert-time">09:30</div>
-          </div>
-
-          <div class="alert-card warn">
-            <div class="alert-icon">🟡</div>
-            <div style="flex:1">
-              <div class="alert-title">3 vistorias aguardando aprovação</div>
-              <div class="alert-sub">Revisar e aprovar registros do dia</div>
-            </div>
-            <div class="alert-time">agora</div>
-          </div>
+          <div id="dash-alertas"></div>
         </div>
 
         <div>
@@ -749,97 +715,20 @@
                 <th>Destino</th>
                 <th>Status</th>
               </tr></thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <div class="d-cell">
-                      <div class="d-avatar" style="background:#1a56db">C</div>
-                      <div><div class="d-name">Carlos Silva</div><div class="d-sub">ABC-1D23</div></div>
-                    </div>
-                  </td>
-                  <td>SP → Campinas</td>
-                  <td><span class="badge danger">Ocorrência</span></td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="d-cell">
-                      <div class="d-avatar" style="background:#0f9d58">J</div>
-                      <div><div class="d-name">José Alves</div><div class="d-sub">DEF-4T56</div></div>
-                    </div>
-                  </td>
-                  <td>Ribeirão → SP</td>
-                  <td><span class="badge warn">Atenção</span></td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="d-cell">
-                      <div class="d-avatar" style="background:#f59e0b">R</div>
-                      <div><div class="d-name">Roberto Melo</div><div class="d-sub">XYZ-9K12</div></div>
-                    </div>
-                  </td>
-                  <td>BH → Rio</td>
-                  <td><span class="badge danger">Ocorrência</span></td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="d-cell">
-                      <div class="d-avatar" style="background:#7c3aed">F</div>
-                      <div><div class="d-name">Fernando Lima</div><div class="d-sub">GHI-7P89</div></div>
-                    </div>
-                  </td>
-                  <td>SP → Santos</td>
-                  <td><span class="badge ok">Normal</span></td>
-                </tr>
-                <tr>
-                  <td>
-                    <div class="d-cell">
-                      <div class="d-avatar" style="background:#0891b2">M</div>
-                      <div><div class="d-name">Marcos Souza</div><div class="d-sub">JKL-3M21</div></div>
-                    </div>
-                  </td>
-                  <td>SP → Curitiba</td>
-                  <td><span class="badge ok">Normal</span></td>
-                </tr>
-              </tbody>
+              <tbody id="dash-emservico"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Gráfico de vistorias por dia (placeholder) -->
+      <!-- Gráfico de check lists por dia (últimos 7 dias, dados reais) -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Vistorias da Semana</div>
-          <div class="chip">Jun 2026</div>
+          <div class="card-title">Check Lists da Semana</div>
+          <div class="chip" id="dash-chart-chip"></div>
         </div>
         <div class="card-body" style="padding:20px">
-          <div style="display:flex;align-items:flex-end;gap:12px;height:100px">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="width:100%;background:var(--primary);border-radius:4px 4px 0 0;height:60px"></div>
-              <div style="font-size:11px;color:var(--gray-500)">Seg</div>
-              <div style="font-size:12px;font-weight:700">6</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="width:100%;background:var(--primary);border-radius:4px 4px 0 0;height:80px"></div>
-              <div style="font-size:11px;color:var(--gray-500)">Ter</div>
-              <div style="font-size:12px;font-weight:700">8</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="width:100%;background:var(--primary);border-radius:4px 4px 0 0;height:50px"></div>
-              <div style="font-size:11px;color:var(--gray-500)">Qua</div>
-              <div style="font-size:12px;font-weight:700">5</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="width:100%;background:var(--primary);border-radius:4px 4px 0 0;height:90px"></div>
-              <div style="font-size:11px;color:var(--gray-500)">Qui</div>
-              <div style="font-size:12px;font-weight:700">9</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="width:100%;background:var(--primary-light);border-radius:4px 4px 0 0;height:70px;border:2px dashed var(--primary)"></div>
-              <div style="font-size:11px;color:var(--primary);font-weight:700">Hoje</div>
-              <div style="font-size:12px;font-weight:700;color:var(--primary)">6</div>
-            </div>
-          </div>
+          <div style="display:flex;align-items:flex-end;gap:12px;height:100px" id="dash-chart"></div>
         </div>
       </div>
     </div>
@@ -973,8 +862,8 @@
           <div class="section-sub">Motoristas em viagem · Rotas e desempenho</div>
         </div>
         <div class="gap-8">
-          <span class="chip">5 em viagem</span>
-          <span class="chip">3 disponíveis</span>
+          <span class="chip" id="op-chip-viagem">0 em viagem</span>
+          <span class="chip" id="op-chip-disp">0 disponíveis</span>
         </div>
       </div>
 
@@ -1076,11 +965,6 @@
           <label class="form-label">Veículo vinculado</label>
           <select class="form-control" id="m-veiculo">
             <option value="">Nenhum</option>
-            <option>ABC-1D23 — Scania R450</option>
-            <option>DEF-4T56 — Volvo FH 500</option>
-            <option>XYZ-9K12 — Mercedes Actros</option>
-            <option>GHI-7P89 — Iveco Stralis</option>
-            <option>JKL-3M21 — DAF XF 480</option>
           </select>
         </div>
         <div class="form-group">
@@ -1481,12 +1365,112 @@ function updateBadges() {
   const pending = vistorias.filter(v => v.status === 'pending').length;
   document.getElementById('badge-motoristas').textContent = drivers.length;
   document.getElementById('badge-vistorias').textContent  = pending;
+  document.getElementById('badge-operacao').textContent   = drivers.filter(d => d.status === 'Em viagem').length;
   document.getElementById('topbar-alert').textContent     = pending ? `${pending} pendências` : 'Tudo aprovado';
   document.getElementById('topbar-alert').className       = pending ? 'topbar-badge' : 'topbar-badge ok';
 }
 
 function renderDashboard() {
   updateBadges();
+
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const hoje = new Date();
+
+  const emViagem    = drivers.filter(d => d.status === 'Em viagem');
+  const vHoje       = vistorias.filter(v => v.datetime && sameDay(new Date(v.datetime), hoje));
+  const pendentes   = vistorias.filter(v => v.status === 'pending');
+  const reprovados  = vistorias.filter(v => v.has_reprovado);
+  const reprovAbertos = reprovados.filter(v => v.status === 'pending');
+
+  // ── KPIs ──
+  document.getElementById('kpi-motoristas').textContent     = drivers.length;
+  document.getElementById('kpi-motoristas-sub').textContent = `${emViagem.length} em viagem agora`;
+  document.getElementById('kpi-vistorias').textContent      = vHoje.length;
+  document.getElementById('kpi-vistorias-sub').textContent  =
+    `${vHoje.filter(v => v.status === 'approved').length} aprovados · ${vHoje.filter(v => v.status === 'pending').length} pendentes`;
+  document.getElementById('kpi-pendentes').textContent      = pendentes.length;
+  document.getElementById('kpi-pendentes-sub').textContent  = pendentes.length ? 'Revisar na aba Vistorias' : 'Nenhum pendente';
+  document.getElementById('kpi-reprovados').textContent     = reprovAbertos.length;
+  document.getElementById('kpi-reprovados-sub').textContent = reprovAbertos.length ? 'Itens reprovados no check list' : 'Nenhuma ocorrência';
+
+  // ── Alertas críticos ──
+  const alertas = [];
+  reprovAbertos.slice(0, 3).forEach(v => {
+    const hora = v.datetime ? new Date(v.datetime).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+    alertas.push(`
+      <div class="alert-card danger" onclick="navigate('vistorias', null)">
+        <div class="alert-icon">🔴</div>
+        <div style="flex:1">
+          <div class="alert-title">Item reprovado — ${v.motorista_nome || '—'}</div>
+          <div class="alert-sub">${v.placa_veiculo || ''} · ${v.local_coleta || '—'} → ${v.destino || '—'}</div>
+        </div>
+        <div class="alert-time">${hora}</div>
+      </div>`);
+  });
+  if (pendentes.length) {
+    alertas.push(`
+      <div class="alert-card warn" onclick="navigate('vistorias', null)">
+        <div class="alert-icon">🟡</div>
+        <div style="flex:1">
+          <div class="alert-title">${pendentes.length} check list${pendentes.length > 1 ? 's' : ''} aguardando aprovação</div>
+          <div class="alert-sub">Revisar e aprovar registros</div>
+        </div>
+        <div class="alert-time">agora</div>
+      </div>`);
+  }
+  document.getElementById('dash-alertas').innerHTML = alertas.length
+    ? alertas.join('')
+    : '<div class="card" style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px">✅ Nenhum alerta no momento</div>';
+
+  // ── Em serviço agora ──
+  const tbody = document.getElementById('dash-emservico');
+  if (!emViagem.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--gray-400);font-size:13px">Nenhum motorista em viagem</td></tr>';
+  } else {
+    tbody.innerHTML = emViagem.map(d => {
+      const v = vistorias.filter(x => x.motorista_id === d.id || x.motorista_nome === d.nome)
+                         .sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0];
+      const rota  = v ? `${v.local_coleta || '—'} → ${v.destino || '—'}` : '—';
+      const issue = v && v.has_reprovado;
+      return `
+        <tr>
+          <td>
+            <div class="d-cell">
+              <div class="d-avatar" style="background:${statusColors[d.status] || '#666'}">${d.nome[0]}</div>
+              <div><div class="d-name">${d.nome}</div><div class="d-sub">${d.veiculo || '—'}</div></div>
+            </div>
+          </td>
+          <td>${rota}</td>
+          <td><span class="badge ${issue ? 'danger' : 'ok'}">${issue ? 'Ocorrência' : 'Normal'}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Check lists dos últimos 7 dias ──
+  const chartEl = document.getElementById('dash-chart');
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(hoje); d.setDate(hoje.getDate() - i);
+    dias.push({ date: d, count: vistorias.filter(v => v.datetime && sameDay(new Date(v.datetime), d)).length });
+  }
+  const max = Math.max(1, ...dias.map(x => x.count));
+  const nomesDia = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  document.getElementById('dash-chart-chip').textContent =
+    hoje.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).replace('.', '');
+  chartEl.innerHTML = dias.map((x, i) => {
+    const isHoje = i === 6;
+    const h = Math.round((x.count / max) * 90);
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+        <div style="width:100%;border-radius:4px 4px 0 0;height:${Math.max(h, 4)}px;${
+          isHoje
+            ? 'background:var(--primary-light);border:2px dashed var(--primary)'
+            : x.count ? 'background:var(--primary)' : 'background:var(--gray-200)'
+        }"></div>
+        <div style="font-size:11px;${isHoje ? 'color:var(--primary);font-weight:700' : 'color:var(--gray-500)'}">${isHoje ? 'Hoje' : nomesDia[x.date.getDay()]}</div>
+        <div style="font-size:12px;font-weight:700;${isHoje ? 'color:var(--primary)' : ''}">${x.count}</div>
+      </div>`;
+  }).join('');
 }
 
 /* ════════════════════════════════════════
@@ -1571,13 +1555,23 @@ function renderDrivers(filter = '') {
 
 function filterDrivers(v) { renderDrivers(v); }
 
+// Popula o select de veículo com a frota real (aba Gestão de Frota)
+function fillVeiculoOptions(selected) {
+  const sel = document.getElementById('m-veiculo');
+  const labels = veiculos.map(v => `${v.placa}${v.modelo ? ' — ' + v.modelo : ''}`);
+  if (selected && !labels.includes(selected)) labels.push(selected); // preserva vínculo antigo
+  sel.innerHTML = '<option value="">Nenhum</option>' +
+    labels.map(l => `<option${l === selected ? ' selected' : ''}>${l}</option>`).join('');
+  sel.value = selected || '';
+}
+
 function openCadastro() {
   editingDriverId = null;
   document.getElementById('modal-title').textContent = 'Novo Motorista';
   ['m-nome','m-cpf','m-cnh','m-tel','m-obs'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('m-cnh-cat').value = 'E';
   document.getElementById('m-admissao').value = '';
-  document.getElementById('m-veiculo').value = '';
+  fillVeiculoOptions('');
   document.getElementById('m-status').value  = 'Disponível';
   openModal('modal-motorista');
 }
@@ -1593,7 +1587,7 @@ function editMotorista(id) {
   document.getElementById('m-cnh-cat').value = d.cnhCat;
   document.getElementById('m-tel').value     = d.tel;
   document.getElementById('m-admissao').value= d.admissao;
-  document.getElementById('m-veiculo').value = d.veiculo;
+  fillVeiculoOptions(d.veiculo || '');
   document.getElementById('m-status').value  = d.status;
   document.getElementById('m-obs').value     = d.obs;
   openModal('modal-motorista');
@@ -2139,32 +2133,40 @@ const tripLabel  = { ok:'Normal', warn:'Atenção', critical:'Ocorrência grave'
 
 function renderOperacao() {
   const container = document.getElementById('op-cards-container');
-  container.innerHTML = trips.map(t => {
-    const pct = Math.round((t.kmFeito / t.kmTotal) * 100);
-    const saida   = new Date(t.saida).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const chegada = new Date(t.chegada).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const emViagem    = drivers.filter(d => d.status === 'Em viagem');
+  const disponiveis = drivers.filter(d => d.status === 'Disponível');
+  document.getElementById('op-chip-viagem').textContent = `${emViagem.length} em viagem`;
+  document.getElementById('op-chip-disp').textContent   = `${disponiveis.length} disponíveis`;
+
+  if (!emViagem.length) {
+    container.innerHTML = `
+      <div class="card" style="grid-column:1/-1;padding:32px;text-align:center;color:var(--gray-400);font-size:13px">
+        🚛 Nenhuma viagem em andamento no momento.<br>
+        <span style="font-size:12px">Quando um motorista estiver com status "Em viagem", ele aparece aqui.</span>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = emViagem.map(d => {
+    const v = vistorias.filter(x => x.motorista_id === d.id || x.motorista_nome === d.nome)
+                       .sort((a, b) => new Date(b.datetime) - new Date(a.datetime))[0];
+    const issue  = v && v.has_reprovado;
+    const rota   = v ? `${v.local_coleta || '—'} → ${v.destino || '—'}` : 'Rota não informada';
+    const saida  = v && v.datetime ? new Date(v.datetime).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
     return `
-      <div class="op-card ${tripStatus[t.status]}" onclick="showDetail(${t.driverId})">
+      <div class="op-card ${issue ? 'critical' : 'active-trip'}" ${v ? `onclick="openVistoria(${v.id})"` : ''}>
         <div class="op-card-header">
-          <div class="d-avatar" style="background:${statusColors['Em viagem']}">${t.nome[0]}</div>
+          <div class="d-avatar" style="background:${statusColors['Em viagem']}">${d.nome[0]}</div>
           <div style="flex:1;min-width:0">
-            <div class="d-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.nome}</div>
-            <div class="d-sub">${t.placa} · ${t.modelo}</div>
+            <div class="d-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.nome}</div>
+            <div class="d-sub">${(v && v.placa_veiculo) || d.veiculo || '—'}</div>
           </div>
-          <span class="badge ${tripBadge[t.status]}">${tripLabel[t.status]}</span>
+          <span class="badge ${issue ? 'danger' : 'ok'}">${issue ? 'Ocorrência' : 'Normal'}</span>
         </div>
         <div class="op-card-body">
-          <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">${t.origem} → ${t.destino}</div>
-          <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">Saída ${saida} · Prev. chegada ${chegada}</div>
-          <div class="op-km-bar">
-            <div class="op-km-label">
-              <span>Progresso da rota</span>
-              <span style="font-weight:700;color:var(--gray-700)">${pct}%</span>
-            </div>
-            <div class="op-km-bg">
-              <div class="op-km-fill" style="width:${pct}%;background:${t.status==='critical'?'var(--danger)':t.status==='warn'?'var(--warning)':'var(--success)'}"></div>
-            </div>
-          </div>
+          <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px">${rota}</div>
+          <div style="font-size:11px;color:var(--gray-400)">${v ? `Check list de saída: ${saida}` : 'Sem check list registrado'}</div>
         </div>
       </div>
     `;
