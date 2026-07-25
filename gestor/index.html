@@ -2059,6 +2059,8 @@ function reprovarVistoria() { _patchVistoria('rejected'); }
 /* ── Helpers da edição total do check list ── */
 function escAttrG(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escHtmlG(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Remove o bloco "MOTIVOS DE REPROVA:" das observações (ele é editado por ponto abaixo)
+function stripReprovaBlock(obs) { return String(obs ?? '').split('MOTIVOS DE REPROVA:')[0].trim(); }
 
 function editField(id, label, value, opts = {}) {
   const type = opts.type || 'text';
@@ -2115,7 +2117,8 @@ function buildEditCampos(v) {
       </div>
       <div class="form-group">
         <label class="form-label">Observações do motorista</label>
-        <textarea class="form-control" id="edit-obs" rows="2">${escHtmlG(v.obs)}</textarea>
+        <textarea class="form-control" id="edit-obs" rows="2">${escHtmlG(stripReprovaBlock(v.obs))}</textarea>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:3px">Os motivos de reprova são editados por ponto, na seção das paradas abaixo.</div>
       </div>
     </div>`;
 }
@@ -2134,12 +2137,21 @@ function buildEditStops(v) {
     const ptsHtml = pontos.map((label, i) => {
       const pid = i + 1;
       const cur = (s.items || {})[pid] || (s.items || {})[String(pid)] || '';
-      return `<div class="edit-pt-row">
-        <div class="edit-pt-label">${pid}. ${label}</div>
-        <div class="edit-pt-btns" id="ept-${si}-${pid}">
-          <button type="button" class="ept ${cur==='A'?'sel-a':''}"  onclick="editSetPoint(${si},${pid},'A')">A</button>
-          <button type="button" class="ept ${cur==='R'?'sel-r':''}"  onclick="editSetPoint(${si},${pid},'R')">R</button>
-          <button type="button" class="ept ${cur==='NA'?'sel-na':''}" onclick="editSetPoint(${si},${pid},'NA')">N/A</button>
+      const motivo = (s.reprovaReasons || {})[pid] ?? (s.reprovaReasons || {})[String(pid)] ?? '';
+      return `<div class="edit-pt-wrap">
+        <div class="edit-pt-row">
+          <div class="edit-pt-label">${pid}. ${label}</div>
+          <div class="edit-pt-btns" id="ept-${si}-${pid}">
+            <button type="button" class="ept ${cur==='A'?'sel-a':''}"  onclick="editSetPoint(${si},${pid},'A')">A</button>
+            <button type="button" class="ept ${cur==='R'?'sel-r':''}"  onclick="editSetPoint(${si},${pid},'R')">R</button>
+            <button type="button" class="ept ${cur==='NA'?'sel-na':''}" onclick="editSetPoint(${si},${pid},'NA')">N/A</button>
+          </div>
+        </div>
+        <div class="edit-reprova" id="ereprova-${si}-${pid}" style="${cur==='R'?'':'display:none'}">
+          <textarea class="form-control" id="ereprova-ta-${si}-${pid}" rows="2"
+            style="border-color:var(--danger);font-size:12px"
+            placeholder="Motivo da reprova deste ponto..."
+            oninput="editSetReprova(${si},${pid},this.value)">${escHtmlG(motivo)}</textarea>
         </div>
       </div>`;
     }).join('');
@@ -2180,6 +2192,24 @@ function editSetPoint(si, pid, val) {
     b[1].className = 'ept' + (next === 'R'  ? ' sel-r'  : '');
     b[2].className = 'ept' + (next === 'NA' ? ' sel-na' : '');
   }
+  // Mostra/oculta a caixa de motivo da reprova (visível só quando Reprovado)
+  const rbox = document.getElementById(`ereprova-${si}-${pid}`);
+  if (rbox) {
+    const isR = next === 'R';
+    rbox.style.display = isR ? '' : 'none';
+    if (!isR) {
+      if (s.reprovaReasons) delete s.reprovaReasons[String(pid)];
+      const ta = document.getElementById(`ereprova-ta-${si}-${pid}`);
+      if (ta) ta.value = '';
+    }
+  }
+}
+
+function editSetReprova(si, pid, val) {
+  const s = editStopsWorking[si];
+  if (!s) return;
+  if (!s.reprovaReasons) s.reprovaReasons = {};
+  s.reprovaReasons[String(pid)] = val;
 }
 
 function readEditStops() {

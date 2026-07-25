@@ -371,6 +371,68 @@ async function regenerateReports(row) {
   } catch (e) { console.error('[REGEN] Falha ao regerar PDF:', e.message); }
 }
 
+/* Rótulos dos pontos de verificação (espelham os geradores e o painel do gestor).
+   Usados para reconstruir o bloco "MOTIVOS DE REPROVA" no campo obs após edição. */
+const FORMS_PONTOS = {
+  rmc045: [
+    'Para-Choques', 'Motor / Filtro de Ar', 'Pneus / Aros', 'Piso da Cabine',
+    'Tanque de ar / Combustível', 'Caixas de Ferramentas / Travamentos', 'Tanque de Transmissão',
+    'Área da Quinta Roda', 'Parte Externa / Chassis / Embaixo da Carroceria',
+    'Interior / Piso da Carroceria', 'Portas (Interno/Externo) e Sistema de Travamento',
+    'Paredes Laterais da Carroceria', 'Teto Interior / Exterior / Capota', 'Parede Dianteira',
+    'Unidade de Refrigeração', 'Escapamento / Caixa da Bateria', 'Cabine / Compartimentos Internos',
+    'Verificação integridade do Lacre Armador — V.V.T.T.',
+    'Verificação integridade do Lacre MC Transportes — V.V.T.T.',
+    'Verificação da integridade do Lacre do Exportador — V.V.T.T.',
+    'Verificar ausência de pragas visíveis',
+  ],
+  rmc046: [
+    'Verificar o Chassis / Parte Externa',
+    'Portas — Lados Interno e Externo, e integridade dos mecanismos de travamento',
+    'Lateral Direita (interno e externo)', 'Lateral Esquerda (interno e externo)', 'Parede Frontal',
+    'Teto na parte interna (utilize pedaço de madeira para bater)', 'Piso interno',
+    'Parede de Fundo (verificar a profundidade)', 'Carcaça do Ventilador (Sistema de Refrigeração)',
+    'Verificação integridade do Lacre MC Transporte — V.V.T.T.',
+    'Verificar ausência de pragas visíveis',
+  ],
+};
+
+/* Remove o bloco "MOTIVOS DE REPROVA:" do texto de observações, devolvendo só o texto livre */
+function stripReprovaBlock(obs) {
+  if (!obs) return '';
+  return String(obs).split('MOTIVOS DE REPROVA:')[0].trim();
+}
+
+/* Monta o bloco de motivos de reprova a partir das paradas (mesmo formato do app do motorista) */
+function buildReprovaObs(stops, formType) {
+  const pontos = FORMS_PONTOS[formType] || [];
+  const linhas = [];
+  let n = 0;
+  (stops || []).forEach(s => {
+    if (!s || s.pulada || !s.items) return;
+    const tipo = s.tipo || 'Parada';
+    pontos.forEach((label, i) => {
+      const pid = i + 1;
+      if ((s.items[pid] ?? s.items[String(pid)]) === 'R') {
+        n++;
+        const motivo = String((s.reprovaReasons || {})[pid] ?? (s.reprovaReasons || {})[String(pid)] ?? '').trim()
+                       || '(sem motivo informado)';
+        linhas.push(`${n}. [${tipo}] Ponto ${pid} - ${label}: ${motivo}`);
+      }
+    });
+  });
+  if (!linhas.length) return '';
+  return 'MOTIVOS DE REPROVA:\n' + linhas.join('\n');
+}
+
+/* Combina o texto livre com o bloco de motivos de reprova */
+function combinarObs(freeText, reprovaObs) {
+  const partes = [];
+  if (freeText && freeText.trim()) partes.push(freeText.trim());
+  if (reprovaObs) partes.push(reprovaObs);
+  return partes.join('\n\n');
+}
+
 // Todas as vistorias — gestor
 app.get('/api/vistorias', verifyToken, requireGestor, async (_req, res) => {
   const { rows } = await dbQuery(`
@@ -596,7 +658,8 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
       return v;
     };
 
-    // Se as paradas mudaram, recalcula has_reprovado a partir dos pontos
+    // Se as paradas mudaram, recalcula has_reprovado e reconstrói o bloco de
+    // motivos de reprova dentro do campo obs (mesmo formato do app do motorista)
     const stopsEntry = updates.find(([k]) => k === 'stops');
     if (stopsEntry) {
       const stopsArr = Array.isArray(stopsEntry[1]) ? stopsEntry[1] : [];
@@ -604,6 +667,12 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
                                         Object.values(s.items).some(x => x === 'R'));
       updates = updates.filter(([k]) => k !== 'has_reprovado');
       updates.push(['has_reprovado', hasRep]);
+
+      // Texto livre vem do payload (já sem o bloco) ou do registro atual, sempre limpo por segurança
+      const freeText = stripReprovaBlock(changes.obs != null ? changes.obs : antes.obs);
+      const novaObs  = combinarObs(freeText, buildReprovaObs(stopsArr, antes.form_type));
+      updates = updates.filter(([k]) => k !== 'obs');
+      updates.push(['obs', novaObs]);
     }
 
     // Mantém o booleano approved coerente com o status escolhido
