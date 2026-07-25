@@ -244,6 +244,14 @@ async function gerarWord(vistoria) {
   /* ── Tabela de Paradas ── */
   const stops = vistoria.stops; // sempre 4
 
+  const fmtDH = v => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d)) return String(v);
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
   const paradasTable = new Table({
     width: { size: PW, type: WidthType.DXA },
     columnWidths: [PAR_TIPO, PAR_STOP, PAR_STOP, PAR_STOP, PAR_LAST],
@@ -267,6 +275,14 @@ async function gerarWord(vistoria) {
         labelCell('Local', PAR_TIPO),
         ...stops.map((s, i) => valueCell(
           s.pulada ? '—' : (s.local || ''),
+          i === 3 ? PAR_LAST : PAR_STOP,
+          { size: 17 }
+        ))
+      ]}),
+      new TableRow({ children: [
+        labelCell('Data / Hora', PAR_TIPO),
+        ...stops.map((s, i) => valueCell(
+          s.pulada ? '—' : (fmtDH(s.dataHora) || ''),
           i === 3 ? PAR_LAST : PAR_STOP,
           { size: 17 }
         ))

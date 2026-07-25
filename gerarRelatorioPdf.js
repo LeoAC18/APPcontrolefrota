@@ -231,9 +231,18 @@ async function gerarPdf(vistoria) {
     }
     Y += PAR_HH;
 
+    const fmtDH = v => {
+      if (!v) return '';
+      const d = new Date(v);
+      if (isNaN(d)) return String(v);
+      const p = n => String(n).padStart(2, '0');
+      return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+
     const parDataRows = [
       ['Motivo',                    s => s.pulada ? '- (Pulada)' : (s.motivo || '')],
       ['Local',                     s => s.pulada ? '-'          : (s.local  || '')],
+      ['Data / Hora',               s => s.pulada ? '-'          : (fmtDH(s.dataHora) || '')],
       ['Comentarios / Observacoes', s => s.pulada ? '-'          : (s.comentarios || '')],
     ];
 

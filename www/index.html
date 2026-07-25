@@ -928,9 +928,27 @@ function createStop(idx, type) {
     reprovaReasons: {},          // { [pontoId]: 'motivo da reprova' }
     lacrePhotos: {},             // { armador|mc|exportador: dataURL }
     houveAlteracao: idx === 0 ? true : null, // partida sempre preenche; parada pergunta
+    dataHora: '',                // data/hora da parada (horário do dispositivo)
     comentarios: '',
     pulada: false
   };
+}
+
+/* Retorna a data/hora atual do dispositivo no formato aceito por input datetime-local
+   (YYYY-MM-DDTHH:MM), já no fuso horário local. */
+function nowLocalDatetime() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* Formata um valor datetime-local (ou ISO) para exibição pt-BR: DD/MM/AAAA às HH:MM */
+function fmtDataHora(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return v;
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} às ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /* Lista de lacres exigidos por tipo de formulário */
@@ -1410,6 +1428,12 @@ function renderStepStop(cfg, stopIdx) {
     ${checklistHtml}
     ${lacresSectionHtml}
     <div class="form-group" style="margin-top:16px">
+      <label class="form-label">Data e hora da parada <span class="req">*</span></label>
+      <input class="form-input" id="f-datahora-${stopIdx}" type="datetime-local"
+             value="${stop.dataHora || nowLocalDatetime()}" />
+      <div style="font-size:11px;color:var(--gray-500);margin-top:4px">Preenchido automaticamente pelo horário do dispositivo. Ajuste se necessário.</div>
+    </div>
+    <div class="form-group" style="margin-top:16px">
       <label class="form-label">Comentários / Observações desta parada</label>
       <textarea class="form-textarea" id="f-comentarios-${stopIdx}" placeholder="Descreva qualquer observação relevante...">${escHtml(stop.comentarios)}</textarea>
     </div>
@@ -1581,6 +1605,8 @@ async function onLacrePhoto(stopIdx, key, input) {
 function saveStop(stopIdx) {
   state.stops[stopIdx].local = getVal(`f-local-${stopIdx}`);
   state.stops[stopIdx].comentarios = getVal(`f-comentarios-${stopIdx}`);
+  const dh = getVal(`f-datahora-${stopIdx}`);
+  if (dh) state.stops[stopIdx].dataHora = dh;
 }
 
 /* ─── STEP FINAL: Fotos e Finalização ─── */
@@ -1686,6 +1712,10 @@ function validateStep() {
     if (si > 0 && stop.houveAlteracao === null) {
       flashError('Responda se houve alteração nos itens'); return false;
     }
+
+    // Data e hora da parada (auto-preenchida, mas exigida)
+    const dhEl = document.getElementById(`f-datahora-${si}`);
+    if (dhEl && !dhEl.value) { flashError('Informe a data e hora da parada'); return false; }
 
     // Pontos de verificação — só exige preenchimento se refazendo (ou partida)
     const preencheChecklist = si === 0 || stop.houveAlteracao === true;
