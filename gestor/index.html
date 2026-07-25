@@ -781,6 +781,7 @@
             <option value="all">Todas</option>
             <option value="pending">Aguardando aprovação</option>
             <option value="approved">Aprovadas</option>
+            <option value="rejected">Reprovadas</option>
             <option value="issue">Com ocorrência</option>
           </select>
         </div>
@@ -1815,6 +1816,7 @@ function renderVistorias(filter = currentFilter) {
 
   if (filter === 'pending')  list = list.filter(v => v.status === 'pending');
   if (filter === 'approved') list = list.filter(v => v.status === 'approved');
+  if (filter === 'rejected') list = list.filter(v => v.status === 'rejected');
   if (filter === 'issue')    list = list.filter(v => v.avarias.length > 0 || v.noises.length > 0);
 
   const pending = vistorias.filter(v => v.status === 'pending').length;
@@ -1860,7 +1862,9 @@ function renderVistorias(filter = currentFilter) {
         <div style="flex-shrink:0;text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
           ${v.status === 'pending'
             ? '<span class="badge warn">Aguardando aprovação</span>'
-            : '<span class="badge ok">Aprovada</span>'}
+            : v.status === 'rejected'
+              ? '<span class="badge danger">Reprovada</span>'
+              : '<span class="badge ok">Aprovada</span>'}
           <span class="badge ${hasIssue ? 'danger' : 'gray'}">${hasIssue ? '⚠ Com reprovação' : '✓ Sem reprovações'}</span>
         </div>
         <div class="v-actions">
@@ -1946,8 +1950,10 @@ function openVistoria(id) {
 
   vistoriaFotosCarregadas = false;
   switchVistoriaTab('detalhes');
-  document.getElementById('modal-btn-aprovar').style.display = v.status === 'pending' ? '' : 'none';
-  document.getElementById('modal-btn-reprovar').style.display = v.status === 'pending' ? '' : 'none';
+  // Aprovar: disponível enquanto não estiver aprovado (permite aprovar um reprovado após correções)
+  document.getElementById('modal-btn-aprovar').style.display  = v.status === 'approved' ? 'none' : '';
+  // Reprovar: disponível enquanto não estiver reprovado
+  document.getElementById('modal-btn-reprovar').style.display = v.status === 'rejected' ? 'none' : '';
   openModal('modal-vistoria');
 }
 
