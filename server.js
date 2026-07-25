@@ -319,6 +319,58 @@ function formatVistoria(r) {
   };
 }
 
+/* Converte uma linha do banco (snake_case) no formato que os geradores de
+   relatório esperam (camelCase). Usado para regerar o PDF/Word após edição. */
+function dbRowToReportData(row) {
+  const stops = Array.isArray(row.stops)
+    ? row.stops
+    : (row.stops ? (() => { try { return JSON.parse(row.stops); } catch { return []; } })() : []);
+  return {
+    formType:        row.form_type,
+    formCodigo:      row.form_codigo,
+    processo:        row.processo,
+    responsavel:     row.responsavel,
+    motorista:       row.motorista_nome,
+    cpf:             row.cpf,
+    placaVeiculo:    row.placa_veiculo,
+    placaCarreta:    row.placa_carreta,
+    localColeta:     row.local_coleta,
+    destino:         row.destino,
+    numContainer:    row.num_container,
+    tara:            row.tara,
+    maxGross:        row.max_gross,
+    lacreArmador:    row.lacre_armador,
+    lacreMC:         row.lacre_mc,
+    lacreExportador: row.lacre_exportador,
+    obs:             row.obs,
+    dataInspecao:    row.data_inspecao,
+    horaInspecao:    row.hora_inspecao,
+    stops,
+  };
+}
+
+/* Regera os relatórios (Word + PDF) de uma vistoria a partir da linha do banco,
+   sobrescrevendo os arquivos existentes (mesmo relatorio_base). */
+async function regenerateReports(row) {
+  if (!row || !row.relatorio_base) return;
+  const data = dbRowToReportData(row);
+  const stopsForReport = data.stops ? [...data.stops].slice(0, 4) : [];
+  while (stopsForReport.length < 4) {
+    stopsForReport.push({ motivo: '', local: '', items: {}, comentarios: '', pulada: true });
+  }
+  const vistoriaData = { ...data, stops: stopsForReport };
+  const base = row.relatorio_base;
+  try {
+    const wordBuf = await gerarWord(vistoriaData);
+    fs.writeFileSync(path.join(RELAT_DIR, `${base}.docx`), wordBuf);
+  } catch (e) { console.error('[REGEN] Falha ao regerar Word:', e.message); }
+  try {
+    const pdfBuf = await gerarPdf(vistoriaData);
+    fs.writeFileSync(path.join(RELAT_DIR, `${base}.pdf`), pdfBuf);
+    console.log(`[REGEN] Relatórios regerados: ${base}`);
+  } catch (e) { console.error('[REGEN] Falha ao regerar PDF:', e.message); }
+}
+
 // Todas as vistorias — gestor
 app.get('/api/vistorias', verifyToken, requireGestor, async (_req, res) => {
   const { rows } = await dbQuery(`
@@ -527,24 +579,56 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
     if (!curr.rows.length) return res.status(404).json({ error: 'Vistoria não encontrada' });
     const antes = curr.rows[0];
 
-    // Campos que o gestor pode editar
+    // Campos que o gestor pode editar — acesso total ao formulário preenchido
     const camposPermitidos = ['obs_gestor', 'status', 'obs', 'processo', 'responsavel',
-                              'local_coleta', 'destino', 'lacre_armador', 'lacre_mc', 'lacre_exportador'];
-    const updates = Object.entries(changes).filter(([k]) => camposPermitidos.includes(k));
+                              'motorista_nome', 'cpf', 'placa_veiculo', 'placa_carreta',
+                              'local_coleta', 'destino', 'num_container', 'tara', 'max_gross',
+                              'lacre_armador', 'lacre_mc', 'lacre_exportador',
+                              'data_inspecao', 'hora_inspecao', 'stops'];
+    let updates = Object.entries(changes).filter(([k]) => camposPermitidos.includes(k));
     if (!updates.length) return res.status(400).json({ error: 'Nenhum campo válido para alterar' });
 
+    // Normaliza valores por tipo de coluna
+    const numericos = ['tara', 'max_gross'];
+    const valForSql = (k, v) => {
+      if (k === 'stops')          return JSON.stringify(Array.isArray(v) ? v : (v || []));
+      if (numericos.includes(k))  return (v === '' || v == null) ? null : v;
+      return v;
+    };
+
+    // Se as paradas mudaram, recalcula has_reprovado a partir dos pontos
+    const stopsEntry = updates.find(([k]) => k === 'stops');
+    if (stopsEntry) {
+      const stopsArr = Array.isArray(stopsEntry[1]) ? stopsEntry[1] : [];
+      const hasRep = stopsArr.some(s => s && !s.pulada && s.items &&
+                                        Object.values(s.items).some(x => x === 'R'));
+      updates = updates.filter(([k]) => k !== 'has_reprovado');
+      updates.push(['has_reprovado', hasRep]);
+    }
+
+    // Mantém o booleano approved coerente com o status escolhido
+    const statusEntry = updates.find(([k]) => k === 'status');
+    if (statusEntry) {
+      updates = updates.filter(([k]) => k !== 'approved');
+      updates.push(['approved', statusEntry[1] === 'approved']);
+    }
+
     const setClauses = updates.map(([k], i) => `${k}=$${i + 1}`).join(', ');
-    const valores    = updates.map(([, v]) => v);
+    const valores    = updates.map(([k, v]) => valForSql(k, v));
     valores.push(req.params.id);
 
     const { rows } = await dbQuery(
       `UPDATE vistorias SET ${setClauses} WHERE id=$${valores.length} RETURNING *`,
       valores
     );
+    const novo = rows[0];
 
-    // Registra o histórico da alteração
+    // Registra o histórico da alteração (campos volumosos ficam resumidos)
     const dadosAnt = {}, dadosNov = {};
-    updates.forEach(([k, v]) => { dadosAnt[k] = antes[k]; dadosNov[k] = v; });
+    updates.forEach(([k, v]) => {
+      if (k === 'stops') { dadosAnt[k] = '(pontos do check list)'; dadosNov[k] = '(atualizado)'; }
+      else               { dadosAnt[k] = antes[k]; dadosNov[k] = v; }
+    });
 
     await dbQuery(
       `INSERT INTO vistoria_alteracoes (vistoria_id, gestor_id, gestor_nome, motivo, dados_anteriores, dados_novos)
@@ -553,8 +637,11 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
        JSON.stringify(dadosAnt), JSON.stringify(dadosNov)]
     );
 
+    // Regera os relatórios (Word + PDF) com os dados corrigidos
+    await regenerateReports(novo);
+
     console.log(`[EDITAR] Vistoria ${req.params.id} alterada por ${req.user.nome} — motivo: ${motivo.trim()}`);
-    res.json(rows[0]);
+    res.json(novo);
   } catch (err) {
     console.error('[ERRO] PATCH /api/vistorias/:id/editar:', err.message);
     res.status(500).json({ error: 'Erro ao salvar alteração' });

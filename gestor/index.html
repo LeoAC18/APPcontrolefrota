@@ -422,6 +422,20 @@
     }
     .vistoria-row:last-child { border-bottom: none; }
     .vistoria-row:hover { background: var(--gray-50); }
+
+    /* ══ EDIÇÃO DE PONTOS DO CHECK LIST ══ */
+    .edit-stop-card { border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+    .edit-stop-title { font-size:13px; font-weight:700; color:var(--gray-700); margin-bottom:10px; }
+    .edit-pt-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--gray-100); }
+    .edit-pt-label { flex:1; font-size:12px; color:var(--gray-700); }
+    .edit-pt-btns { display:flex; gap:4px; flex-shrink:0; }
+    .ept { border:1px solid var(--gray-300); background:#fff; color:var(--gray-500); border-radius:6px;
+           padding:3px 9px; font-size:12px; font-weight:700; cursor:pointer; line-height:1.2; }
+    .ept:hover { background:var(--gray-50); }
+    .ept.sel-a  { background:var(--success, #16a34a); border-color:var(--success, #16a34a); color:#fff; }
+    .ept.sel-r  { background:var(--danger, #dc2626);  border-color:var(--danger, #dc2626);  color:#fff; }
+    .ept.sel-na { background:var(--gray-400, #9ca3af); border-color:var(--gray-400, #9ca3af); color:#fff; }
+    .edit-reprova { margin-top:6px; }
     .v-left { flex: 1; min-width: 0; }
     .v-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .v-form-badge { background: var(--primary-light); color: var(--primary); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: .3px; flex-shrink: 0; }
@@ -1034,7 +1048,7 @@
      MODAL: EDITAR VISTORIA
 ══════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-editar">
-  <div class="modal" style="width:560px">
+  <div class="modal" style="width:720px;max-width:95vw">
     <div class="modal-header">
       <div class="modal-title">Editar Check List</div>
       <button class="modal-close" onclick="closeModal('modal-editar')">✕</button>
@@ -1058,25 +1072,15 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">N° Processo</label>
-          <input class="form-control" id="edit-processo" type="text" placeholder="PROC-2024-001" />
+          <label class="form-label">Observação do Gestor</label>
+          <input class="form-control" id="edit-obs-gestor" type="text" placeholder="Observações do gestor..." />
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Observação do Gestor</label>
-        <textarea class="form-control" id="edit-obs-gestor" rows="2"
-          placeholder="Observações adicionais do gestor..."></textarea>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Local de Coleta</label>
-          <input class="form-control" id="edit-local-coleta" type="text" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Destino</label>
-          <input class="form-control" id="edit-destino" type="text" />
-        </div>
-      </div>
+
+      <!-- Campos do formulário preenchido pelo motorista (montados dinamicamente) -->
+      <div id="edit-campos"></div>
+      <div id="edit-stops"></div>
+
       <div id="edit-error" style="display:none;color:var(--danger);font-size:13px;margin-top:8px;background:var(--danger-light);padding:8px 12px;border-radius:8px"></div>
 
       <!-- Histórico de alterações anteriores -->
@@ -1301,6 +1305,34 @@ let deletingDriverId  = null;
 let currentVistoriaId = null;
 let editingVistoriaId = null;
 let currentFilter     = 'all';
+
+// Rótulos dos pontos de verificação por tipo de check list (espelham o gerador de relatório)
+const FORMS_PONTOS = {
+  rmc045: [
+    'Para-Choques', 'Motor / Filtro de Ar', 'Pneus / Aros', 'Piso da Cabine',
+    'Tanque de ar / Combustível', 'Caixas de Ferramentas / Travamentos', 'Tanque de Transmissão',
+    'Área da Quinta Roda', 'Parte Externa / Chassis / Embaixo da Carroceria',
+    'Interior / Piso da Carroceria', 'Portas (Interno/Externo) e Sistema de Travamento',
+    'Paredes Laterais da Carroceria', 'Teto Interior / Exterior / Capota', 'Parede Dianteira',
+    'Unidade de Refrigeração', 'Escapamento / Caixa da Bateria', 'Cabine / Compartimentos Internos',
+    'Verificação integridade do Lacre Armador — V.V.T.T.',
+    'Verificação integridade do Lacre MC Transportes — V.V.T.T.',
+    'Verificação da integridade do Lacre do Exportador — V.V.T.T.',
+    'Verificar ausência de pragas visíveis',
+  ],
+  rmc046: [
+    'Verificar o Chassis / Parte Externa',
+    'Portas — Lados Interno e Externo, e integridade dos mecanismos de travamento',
+    'Lateral Direita (interno e externo)', 'Lateral Esquerda (interno e externo)', 'Parede Frontal',
+    'Teto na parte interna (utilize pedaço de madeira para bater)', 'Piso interno',
+    'Parede de Fundo (verificar a profundidade)', 'Carcaça do Ventilador (Sistema de Refrigeração)',
+    'Verificação integridade do Lacre MC Transporte — V.V.T.T.',
+    'Verificar ausência de pragas visíveis',
+  ],
+};
+
+// Cópia de trabalho das paradas em edição (os botões de ponto mutam este objeto)
+let editStopsWorking = [];
 let editingEmpresaId  = null;
 let editingVeiculoId  = null;
 let editingCarretaId  = null;
@@ -2024,19 +2056,161 @@ function _patchVistoria(status) {
 function aprovarVistoria()  { _patchVistoria('approved'); }
 function reprovarVistoria() { _patchVistoria('rejected'); }
 
+/* ── Helpers da edição total do check list ── */
+function escAttrG(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtmlG(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function editField(id, label, value, opts = {}) {
+  const type = opts.type || 'text';
+  return `<div class="form-group">
+    <label class="form-label">${label}</label>
+    <input class="form-control" id="${id}" type="${type}" value="${escAttrG(value)}" />
+  </div>`;
+}
+
+// Converte dataHora (datetime-local ou ISO) para o formato do input datetime-local
+function toLocalInput(v) {
+  if (!v) return '';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return String(v).slice(0, 16);
+  const d = new Date(v);
+  if (isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function buildEditCampos(v) {
+  const isContainer = (v.form_type || v.formType) === 'rmc046';
+  const g = (a, b) => v[a] ?? v[b] ?? '';
+  document.getElementById('edit-campos').innerHTML = `
+    <div class="edit-stop-card">
+      <div class="edit-stop-title">Identificação</div>
+      <div class="form-row">
+        ${editField('edit-processo', 'N° do Processo', v.processo)}
+        ${editField('edit-responsavel', 'Responsável pela inspeção', v.responsavel)}
+      </div>
+      <div class="form-row">
+        ${editField('edit-motorista-nome', 'Nome do Motorista', g('motorista_nome', 'motorista'))}
+        ${editField('edit-cpf', 'CPF do Motorista', v.cpf)}
+      </div>
+      <div class="form-row">
+        ${editField('edit-placa-veiculo', 'Placa do Veículo', g('placa_veiculo', 'placa'))}
+        ${editField('edit-placa-carreta', 'Placa da Carreta', v.placa_carreta)}
+      </div>
+    </div>
+    <div class="edit-stop-card">
+      <div class="edit-stop-title">Carga e Lacres</div>
+      <div class="form-row">
+        ${editField('edit-local-coleta', 'Local de Coleta', g('local_coleta', 'localColeta'))}
+        ${editField('edit-destino', 'Destino', v.destino)}
+      </div>
+      ${isContainer ? `<div class="form-row">
+        ${editField('edit-container', 'N° do Container', v.num_container)}
+        ${editField('edit-tara', 'Tara (kg)', v.tara, { type:'number' })}
+        ${editField('edit-maxgross', 'Max. Gross (kg)', v.max_gross, { type:'number' })}
+      </div>` : ''}
+      <div class="form-row">
+        ${isContainer ? '' : editField('edit-lacre-armador', 'Lacre Armador', v.lacre_armador)}
+        ${editField('edit-lacre-mc', 'Lacre MC Transportes', v.lacre_mc)}
+        ${isContainer ? '' : editField('edit-lacre-exportador', 'Lacre Exportador', v.lacre_exportador)}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações do motorista</label>
+        <textarea class="form-control" id="edit-obs" rows="2">${escHtmlG(v.obs)}</textarea>
+      </div>
+    </div>`;
+}
+
+function buildEditStops(v) {
+  const formType = v.form_type || v.formType || 'rmc045';
+  const pontos = FORMS_PONTOS[formType] || [];
+  const stops = Array.isArray(v.stops) ? v.stops : [];
+  editStopsWorking = JSON.parse(JSON.stringify(stops)); // cópia de trabalho
+  const cont = document.getElementById('edit-stops');
+  if (!editStopsWorking.length) { cont.innerHTML = ''; return; }
+
+  cont.innerHTML = editStopsWorking.map((s, si) => {
+    if (s && s.pulada) return '';
+    const tipo = s.tipo || (si === 0 ? 'Partida' : `${si}ª Parada`);
+    const ptsHtml = pontos.map((label, i) => {
+      const pid = i + 1;
+      const cur = (s.items || {})[pid] || (s.items || {})[String(pid)] || '';
+      return `<div class="edit-pt-row">
+        <div class="edit-pt-label">${pid}. ${label}</div>
+        <div class="edit-pt-btns" id="ept-${si}-${pid}">
+          <button type="button" class="ept ${cur==='A'?'sel-a':''}"  onclick="editSetPoint(${si},${pid},'A')">A</button>
+          <button type="button" class="ept ${cur==='R'?'sel-r':''}"  onclick="editSetPoint(${si},${pid},'R')">R</button>
+          <button type="button" class="ept ${cur==='NA'?'sel-na':''}" onclick="editSetPoint(${si},${pid},'NA')">N/A</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="edit-stop-card">
+      <div class="edit-stop-title">🛑 ${tipo}</div>
+      <div class="form-row">
+        ${editField(`edit-stop-motivo-${si}`, 'Motivo', s.motivo)}
+        ${editField(`edit-stop-local-${si}`, 'Local', s.local)}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data e hora da parada</label>
+        <input class="form-control" id="edit-stop-dh-${si}" type="datetime-local" value="${toLocalInput(s.dataHora)}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comentários / Observações</label>
+        <textarea class="form-control" id="edit-stop-coment-${si}" rows="2">${escHtmlG(s.comentarios)}</textarea>
+      </div>
+      <div style="margin-top:8px">
+        <div class="edit-stop-title" style="font-size:12px;margin-bottom:4px">Pontos de verificação</div>
+        ${ptsHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editSetPoint(si, pid, val) {
+  const s = editStopsWorking[si];
+  if (!s) return;
+  if (!s.items) s.items = {};
+  const cur = s.items[pid] ?? s.items[String(pid)] ?? '';
+  const next = cur === val ? '' : val;
+  // Chaves numéricas e string são a mesma chave em JS — basta atribuir
+  s.items[String(pid)] = next;
+  const box = document.getElementById(`ept-${si}-${pid}`);
+  if (box) {
+    const b = box.querySelectorAll('.ept');
+    b[0].className = 'ept' + (next === 'A'  ? ' sel-a'  : '');
+    b[1].className = 'ept' + (next === 'R'  ? ' sel-r'  : '');
+    b[2].className = 'ept' + (next === 'NA' ? ' sel-na' : '');
+  }
+}
+
+function readEditStops() {
+  editStopsWorking.forEach((s, si) => {
+    if (s && s.pulada) return;
+    const mot = document.getElementById(`edit-stop-motivo-${si}`);
+    const loc = document.getElementById(`edit-stop-local-${si}`);
+    const dh  = document.getElementById(`edit-stop-dh-${si}`);
+    const com = document.getElementById(`edit-stop-coment-${si}`);
+    if (mot) s.motivo = mot.value;
+    if (loc) s.local = loc.value;
+    if (dh)  s.dataHora = dh.value;
+    if (com) s.comentarios = com.value;
+  });
+  return editStopsWorking;
+}
+
 async function openEditar(id) {
   editingVistoriaId = id;
   const v = vistorias.find(x => x.id === id);
   if (!v) return;
 
-  // Preenche campos do modal
+  // Preenche campos fixos do modal
   document.getElementById('edit-motivo').value     = '';
   document.getElementById('edit-status').value     = v.status || 'pending';
   document.getElementById('edit-obs-gestor').value = v.obs_gestor || '';
-  document.getElementById('edit-processo').value   = v.processo || '';
-  document.getElementById('edit-local-coleta').value = v.local_coleta || v.localColeta || '';
-  document.getElementById('edit-destino').value    = v.destino || '';
   document.getElementById('edit-error').style.display = 'none';
+
+  // Monta dinamicamente todos os campos do formulário preenchido pelo motorista
+  buildEditCampos(v);
+  buildEditStops(v);
 
   // Carrega histórico de alterações
   const histSec  = document.getElementById('edit-historico-section');
@@ -2096,14 +2270,31 @@ async function salvarEdicao() {
     return;
   }
 
+  const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : undefined; };
   const payload = {
     motivo,
-    status:      document.getElementById('edit-status').value,
-    obs_gestor:  document.getElementById('edit-obs-gestor').value.trim(),
-    processo:    document.getElementById('edit-processo').value.trim(),
-    local_coleta: document.getElementById('edit-local-coleta').value.trim(),
-    destino:     document.getElementById('edit-destino').value.trim(),
+    status:         document.getElementById('edit-status').value,
+    obs_gestor:     gv('edit-obs-gestor'),
+    processo:       gv('edit-processo'),
+    responsavel:    gv('edit-responsavel'),
+    motorista_nome: gv('edit-motorista-nome'),
+    cpf:            gv('edit-cpf'),
+    placa_veiculo:  (gv('edit-placa-veiculo') || '').toUpperCase(),
+    placa_carreta:  (gv('edit-placa-carreta') || '').toUpperCase(),
+    local_coleta:   gv('edit-local-coleta'),
+    destino:        gv('edit-destino'),
+    lacre_mc:       gv('edit-lacre-mc'),
+    obs:            gv('edit-obs'),
+    stops:          readEditStops(),
   };
+  // Campos exclusivos do formulário de container (RMC-046)
+  if (document.getElementById('edit-container')) {
+    payload.num_container = gv('edit-container');
+    payload.tara         = gv('edit-tara');
+    payload.max_gross    = gv('edit-maxgross');
+  }
+  if (document.getElementById('edit-lacre-armador'))    payload.lacre_armador    = gv('edit-lacre-armador');
+  if (document.getElementById('edit-lacre-exportador')) payload.lacre_exportador = gv('edit-lacre-exportador');
 
   btn.disabled = true; btn.textContent = 'Salvando...';
   try {
@@ -2115,13 +2306,9 @@ async function salvarEdicao() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
 
-    // Atualiza dados locais
-    const idx = vistorias.findIndex(x => x.id === editingVistoriaId);
-    if (idx !== -1) vistorias[idx] = { ...vistorias[idx], ...data };
-
     closeModal('modal-editar');
-    renderVistorias();
-    updateBadges();
+    // Recarrega tudo para refletir dados corrigidos e relatórios regerados
+    await loadData();
   } catch (e) {
     errEl.textContent = e.message;
     errEl.style.display = 'block';
