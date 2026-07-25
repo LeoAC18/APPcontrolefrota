@@ -607,9 +607,9 @@
     Gerenciar Motoristas
   </button>
 
-  <div class="sidebar-section">Vistorias</div>
+  <div class="sidebar-section">Check Lists</div>
   <button class="nav-item" onclick="navigate('vistorias', this)">
-    <span class="ni-icon">📋</span> Vistorias
+    <span class="ni-icon">📋</span> Check Lists
     <span class="ni-badge warn" id="badge-vistorias">3</span>
   </button>
 
@@ -758,7 +758,7 @@
             <th>Veículo</th>
             <th>Telefone</th>
             <th>Status</th>
-            <th>Vistorias</th>
+            <th>Check Lists</th>
             <th>Ações</th>
           </tr></thead>
           <tbody id="drivers-tbody"></tbody>
@@ -771,7 +771,7 @@
     <div class="page" id="page-vistorias">
       <div class="section-header">
         <div>
-          <div class="section-title">Vistorias</div>
+          <div class="section-title">Check Lists</div>
           <div class="section-sub">Registros de saída aguardando revisão e aprovados</div>
         </div>
         <div class="gap-8" style="display:flex;gap:8px;align-items:center">
@@ -906,7 +906,7 @@
             </div>
 
             <div style="margin-top:16px">
-              <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:10px">Vistoria de Saída</div>
+              <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:10px">Check List de Saída</div>
               <div class="card" style="box-shadow:none;border:1px solid var(--gray-200)" id="detail-vistoria"></div>
             </div>
           </div>
@@ -996,14 +996,14 @@
 <div class="modal-overlay" id="modal-vistoria">
   <div class="modal" style="width:600px">
     <div class="modal-header">
-      <div class="modal-title">Detalhe da Vistoria</div>
+      <div class="modal-title">Detalhe do Check List</div>
       <button class="modal-close" onclick="closeModal('modal-vistoria')">✕</button>
     </div>
     <div class="modal-body" id="modal-vistoria-body"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-vistoria')">Fechar</button>
       <button class="btn btn-danger btn-sm" id="modal-btn-reprovar" onclick="reprovarVistoria()">Reprovar</button>
-      <button class="btn btn-success" id="modal-btn-aprovar" onclick="aprovarVistoria()">Aprovar Vistoria</button>
+      <button class="btn btn-success" id="modal-btn-aprovar" onclick="aprovarVistoria()">Aprovar Check List</button>
     </div>
   </div>
 </div>
@@ -1035,7 +1035,7 @@
 <div class="modal-overlay" id="modal-editar">
   <div class="modal" style="width:560px">
     <div class="modal-header">
-      <div class="modal-title">Editar Vistoria</div>
+      <div class="modal-title">Editar Check List</div>
       <button class="modal-close" onclick="closeModal('modal-editar')">✕</button>
     </div>
     <div class="modal-body">
@@ -1357,7 +1357,7 @@ async function loadData() {
       if (msg) msg.textContent = e.message || String(e);
     }
     const vc = document.getElementById('vistorias-container');
-    if (vc) vc.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;font-size:13px">❌ Não foi possível carregar as vistorias. Verifique a conexão com o servidor.<br><small style="color:#6b7280;margin-top:4px;display:block">${e.message || ''}</small></div>`;
+    if (vc) vc.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;font-size:13px">❌ Não foi possível carregar os check lists. Verifique a conexão com o servidor.<br><small style="color:#6b7280;margin-top:4px;display:block">${e.message || ''}</small></div>`;
   }
 }
 
@@ -1389,7 +1389,7 @@ function renderDashboard() {
   document.getElementById('kpi-vistorias-sub').textContent  =
     `${vHoje.filter(v => v.status === 'approved').length} aprovados · ${vHoje.filter(v => v.status === 'pending').length} pendentes`;
   document.getElementById('kpi-pendentes').textContent      = pendentes.length;
-  document.getElementById('kpi-pendentes-sub').textContent  = pendentes.length ? 'Revisar na aba Vistorias' : 'Nenhum pendente';
+  document.getElementById('kpi-pendentes-sub').textContent  = pendentes.length ? 'Revisar na aba Check Lists' : 'Nenhum pendente';
   document.getElementById('kpi-reprovados').textContent     = reprovAbertos.length;
   document.getElementById('kpi-reprovados-sub').textContent = reprovAbertos.length ? 'Itens reprovados no check list' : 'Nenhuma ocorrência';
 
@@ -1476,7 +1476,7 @@ function renderDashboard() {
 /* ════════════════════════════════════════
    NAVIGATION
 ════════════════════════════════════════ */
-const pages = { dashboard:'Dashboard', motoristas:'Motoristas', vistorias:'Vistorias', frota:'Gestão de Frota', operacao:'Operação' };
+const pages = { dashboard:'Dashboard', motoristas:'Motoristas', vistorias:'Check Lists', frota:'Gestão de Frota', operacao:'Operação' };
 const subs  = { dashboard:'Visão geral da frota', motoristas:'Gestão de motoristas', vistorias:'Registros de saída', frota:'ANTT, cavalos e carretas', operacao:'Acompanhamento em tempo real' };
 
 function navigate(pageId, btn) {
@@ -1823,7 +1823,7 @@ function renderVistorias(filter = currentFilter) {
   document.getElementById('topbar-alert').className      = pending ? 'topbar-badge' : 'topbar-badge ok';
 
   if (list.length === 0) {
-    container.innerHTML = '<div class="empty-state">Nenhuma vistoria encontrada.</div>';
+    container.innerHTML = '<div class="empty-state">Nenhum check list encontrado.</div>';
     return;
   }
 
@@ -1866,7 +1866,7 @@ function renderVistorias(filter = currentFilter) {
         <div class="v-actions">
           ${downloadBtns}
           <button class="btn btn-outline btn-sm" onclick="openVistoria(${v.id})">Ver detalhes</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEditar(${v.id})" title="Editar vistoria">✏️ Editar</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditar(${v.id})" title="Editar check list">✏️ Editar</button>
           ${v.status === 'pending' ? `<button class="btn btn-success btn-sm" onclick="quickApprove(${v.id})">Aprovar</button>` : ''}
         </div>
       </div>
@@ -1888,7 +1888,7 @@ function quickApprove(id) {
       if (idx !== -1) vistorias[idx] = { ...vistorias[idx], ...saved };
       renderVistorias();
     })
-    .catch(() => alert('Erro ao aprovar vistoria.'));
+    .catch(() => alert('Erro ao aprovar check list.'));
 }
 
 function openVistoria(id) {
@@ -2012,7 +2012,7 @@ function _patchVistoria(status) {
       closeModal('modal-vistoria');
       renderVistorias();
     })
-    .catch(() => alert('Erro ao atualizar vistoria.'));
+    .catch(() => alert('Erro ao atualizar check list.'));
 }
 
 function aprovarVistoria()  { _patchVistoria('approved'); }
@@ -2218,14 +2218,14 @@ function showDetail(driverId) {
     document.getElementById('detail-vistoria').innerHTML = `
       <div style="padding:14px 16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:700">Vistoria de saída — ${dt}</div>
+          <div style="font-size:13px;font-weight:700">Check List de saída — ${dt}</div>
           <span class="badge ${hasIssue ? 'danger' : 'ok'}">${hasIssue ? 'Com avaria' : 'OK'}</span>
         </div>
         <div style="font-size:12px;color:var(--gray-500)">KM: ${v.km.toLocaleString('pt-BR')} · ${v.urgencia}</div>
         ${v.avarias.length > 0 ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${v.avarias.map(a=>`<span class="v-tag">${a}</span>`).join('')}</div>` : ''}
         ${v.noises.length > 0  ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px">${v.noises.map(n=>`<span class="v-tag warn">${n}</span>`).join('')}</div>` : ''}
         <div style="margin-top:10px">
-          <button class="btn btn-outline btn-sm" onclick="openVistoria(${v.id})">Ver vistoria completa</button>
+          <button class="btn btn-outline btn-sm" onclick="openVistoria(${v.id})">Ver check list completo</button>
         </div>
       </div>
     `;

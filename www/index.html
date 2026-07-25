@@ -791,6 +791,27 @@ function onCarretaSelect(sel) {
   }
 }
 
+/* Monta o <option> de uma carreta (usado na montagem inicial e na busca) */
+function carretaOptionHtml(c) {
+  return `<option value="${c.id}" ${state._carretaId == c.id ? 'selected' : ''}>${c.placa} — ${c.modelo || ''} (ANTT ${c.antt || '?'} · ${c.empresa_nome || '?'})</option>`;
+}
+
+/* Filtra as carretas do select pela placa digitada na caixa de busca (lupa) */
+function filterCarretas(term) {
+  const sel = document.getElementById('f-carreta-sel');
+  if (!sel) return;
+  const t = (term || '').trim().toUpperCase();
+  const prev = sel.value; // preserva a seleção atual, se ainda visível
+  const matches = t
+    ? dbData.carretas.filter(c => (c.placa || '').toUpperCase().includes(t)
+        || (c.modelo || '').toUpperCase().includes(t))
+    : dbData.carretas;
+  sel.innerHTML = '<option value="">Sem carreta / selecione...</option>' + matches.map(carretaOptionHtml).join('');
+  if (prev && matches.some(c => String(c.id) === prev)) sel.value = prev;
+  const nores = document.getElementById('carreta-nores');
+  if (nores) nores.style.display = (t && matches.length === 0) ? '' : 'none';
+}
+
 
 /* ═══════════════════════════════════════
    NAVEGAÇÃO ENTRE TELAS
@@ -963,7 +984,7 @@ function renderStep() {
 
   const isLastStep = stepIdx === steps.length - 1;
   if (step === 'final') {
-    btnNext.textContent = '✅ Enviar Vistoria';
+    btnNext.textContent = '✅ Enviar Check';
     btnNext.className = 'btn-nav submit';
   } else if (isLastStep && formMode === 'partida') {
     btnNext.textContent = '💾 Salvar Partida';
@@ -1016,9 +1037,7 @@ function renderStepIdent() {
     : '';
 
   const carretaOpts = dbData.carretas.length > 0
-    ? dbData.carretas.map(c =>
-        `<option value="${c.id}" ${state._carretaId == c.id ? 'selected' : ''}>${c.placa} — ${c.modelo || ''} (ANTT ${c.antt || '?'} · ${c.empresa_nome || '?'})</option>`
-      ).join('')
+    ? dbData.carretas.map(carretaOptionHtml).join('')
     : '';
 
   const motoristaField = hasDb ? `
@@ -1061,10 +1080,20 @@ function renderStepIdent() {
   const carretaField = carretaOpts ? `
     <div class="form-group">
       <label class="form-label">Carreta / Semirreboque</label>
-      <select class="form-input form-select" id="f-carreta-sel" onchange="onCarretaSelect(this)">
+      <div style="position:relative;margin-bottom:8px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.6">🔍</span>
+        <input class="form-input" id="f-carreta-search" type="text" autocomplete="off"
+               placeholder="Buscar carreta por placa..." oninput="filterCarretas(this.value)"
+               style="padding-left:38px;text-transform:uppercase" />
+      </div>
+      <select class="form-input form-select" id="f-carreta-sel" size="6" onchange="onCarretaSelect(this)"
+              style="height:auto;padding:4px">
         <option value="">Sem carreta / selecione...</option>
         ${carretaOpts}
       </select>
+      <div id="carreta-nores" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-500)">
+        Nenhuma carreta encontrada para esta placa.
+      </div>
       <div id="antt-carreta-badge" style="display:none;margin-top:6px;font-size:12px;font-weight:600;
            color:var(--success);background:var(--success-light);border-radius:8px;padding:6px 10px"></div>
     </div>` : `
@@ -1353,17 +1382,19 @@ function renderStepStop(cfg, stopIdx) {
       <div class="divider"></div>
       <div class="info-box ok">
         <span class="ib-icon">✓</span>
-        <span>As respostas dos ${cfg.pontos.length} pontos foram mantidas da parada anterior. É obrigatório tirar <strong>novas fotos de todos os lacres</strong> abaixo.</span>
+        <span>As respostas dos ${cfg.pontos.length} pontos foram mantidas da parada anterior. Como <strong>não houve alteração</strong>, as fotos dos lacres são <strong>opcionais</strong> — registre-as apenas se quiser.</span>
       </div>
     </div>`;
 
   // Seção de fotos dos lacres — só nas paradas (na partida as fotos são tiradas na etapa Carga)
   const lacresSectionHtml = isPartida ? '' : `
     <div class="divider"></div>
-    <div class="section-title">Fotos dos Lacres (obrigatório)</div>
+    <div class="section-title">Fotos dos Lacres ${naoAlterou ? '(opcional)' : '(obrigatório)'}</div>
     <div class="info-box" style="margin-bottom:12px">
       <span class="ib-icon">📷</span>
-      <span>Tire uma nova foto de cada lacre nesta parada. Sem as fotos não é possível avançar.</span>
+      <span>${naoAlterou
+        ? 'Sem alteração nos itens, as fotos dos lacres são <strong>opcionais</strong> nesta parada. Registre-as apenas se necessário.'
+        : 'Tire uma nova foto de cada lacre nesta parada. Sem as fotos não é possível avançar.'}</span>
     </div>
     ${lacresPhotoHtml}`;
 
@@ -1670,8 +1701,10 @@ function validateStep() {
       }
     }
 
-    // Fotos de lacre: nas paradas (na partida foram tiradas na etapa Carga)
-    if (si > 0) {
+    // Fotos de lacre: obrigatórias apenas quando houve alteração (ou não há parada
+    // anterior comparável). Se o motorista marcou "Não — manter respostas", as fotos
+    // dos lacres passam a ser opcionais.
+    if (si > 0 && stop.houveAlteracao !== false) {
       const lacres = lacresDoForm(stop.stopFormType || state.formType);
       const semFoto = lacres.filter(l => !((stop.lacrePhotos || {})[l.key]));
       if (semFoto.length > 0) {
