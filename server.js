@@ -699,15 +699,27 @@ app.patch('/api/vistorias/:id/editar', verifyToken, requireGestor, async (req, r
       else               { dadosAnt[k] = antes[k]; dadosNov[k] = v; }
     });
 
-    await dbQuery(
-      `INSERT INTO vistoria_alteracoes (vistoria_id, gestor_id, gestor_nome, motivo, dados_anteriores, dados_novos)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
-      [req.params.id, req.user.id, req.user.nome, motivo.trim(),
-       JSON.stringify(dadosAnt), JSON.stringify(dadosNov)]
-    );
+    // A edição já foi persistida acima. Os passos seguintes (histórico e
+    // regeneração de relatórios) são complementares: se algum falhar, apenas
+    // registramos o erro — não devolvemos 500, senão o painel do gestor trataria
+    // um save bem-sucedido como falha e a janela de edição não fecharia.
+    try {
+      await dbQuery(
+        `INSERT INTO vistoria_alteracoes (vistoria_id, gestor_id, gestor_nome, motivo, dados_anteriores, dados_novos)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [req.params.id, req.user.id, req.user.nome, motivo.trim(),
+         JSON.stringify(dadosAnt), JSON.stringify(dadosNov)]
+      );
+    } catch (e) {
+      console.error('[EDITAR] Falha ao registrar histórico da alteração:', e.message);
+    }
 
-    // Regera os relatórios (Word + PDF) com os dados corrigidos
-    await regenerateReports(novo);
+    // Regera os relatórios (Word + PDF) com os dados corrigidos — também não-fatal
+    try {
+      await regenerateReports(novo);
+    } catch (e) {
+      console.error('[EDITAR] Falha ao regerar relatórios:', e.message);
+    }
 
     console.log(`[EDITAR] Vistoria ${req.params.id} alterada por ${req.user.nome} — motivo: ${motivo.trim()}`);
     res.json(novo);
