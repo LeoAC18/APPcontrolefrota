@@ -525,7 +525,11 @@ app.post('/api/vistorias', verifyToken, async (req, res) => {
 
     const ts       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const nomeSafe = (d.motorista || 'motorista').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    const base     = `${(d.formType || 'vistoria').toUpperCase()}_${nomeSafe}_${ts}`;
+    // Rótulo por extenso no nome do arquivo (sem a sigla "RMC")
+    const labelForm = d.formType === 'rmc045' ? 'Check-List-21-Pontos'
+                    : d.formType === 'rmc046' ? 'Check-List-11-Pontos'
+                    : 'Check-List';
+    const base     = `${labelForm}_${nomeSafe}_${ts}`;
 
     const { rows } = await dbQuery(`
       INSERT INTO vistorias (
