@@ -833,9 +833,15 @@
 
       <!-- Empresas / ANTT -->
       <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
-          <div><span style="font-weight:700">Empresas / ANTT</span> <span style="color:var(--gray-400);font-size:12px">— base de todos os veículos</span></div>
-          <button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Adicionar ANTT</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Empresas / ANTT</span> <span style="color:var(--gray-400);font-size:12px">— base de todos os veículos</span> <span id="frota-empresas-filtro-info" style="color:var(--gray-400);font-size:12px"></span></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="frota-empresas-busca" placeholder="Buscar empresa por nome, CNPJ ou ANTT..." oninput="filterFrota('empresas', this.value)" />
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Adicionar ANTT</button>
+          </div>
         </div>
         <table>
           <thead><tr><th>Empresa</th><th>CNPJ</th><th>ANTT</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
@@ -1699,7 +1705,7 @@ function fVal(id) { const el = document.getElementById(id); return el ? el.value
 function fErr(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.style.display = 'block'; }
 
 /* Busca da Gestão de Frota (lupa de cavalos e carretas) */
-const frotaBusca = { veiculos: '', carretas: '' };
+const frotaBusca = { empresas: '', veiculos: '', carretas: '' };
 // Placa comparada sem traço/espaço ("abc1d23" acha "ABC-1D23")
 function normPlacaFrota(p) { return String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 function filtrarFrota(lista, termo) {
@@ -1709,6 +1715,15 @@ function filtrarFrota(lista, termo) {
   return lista.filter(x =>
     (tPlaca && normPlacaFrota(x.placa).includes(tPlaca)) ||
     [x.modelo, x.antt, x.empresa_nome].some(f => String(f || '').toUpperCase().includes(t)));
+}
+// Empresas: nome, ANTT e CNPJ (CNPJ comparado só pelos dígitos — "19326067" acha "19.326.067/0001-49")
+function filtrarEmpresas(lista, termo) {
+  const t = String(termo || '').trim().toUpperCase();
+  if (!t) return lista;
+  const tDig = t.replace(/\D/g, '');
+  return lista.filter(e =>
+    [e.nome, e.antt, e.cnpj].some(f => String(f || '').toUpperCase().includes(t)) ||
+    (tDig && [e.cnpj, e.antt].some(f => String(f || '').replace(/\D/g, '').includes(tDig))));
 }
 function filterFrota(kind, termo) {
   frotaBusca[kind] = termo;
@@ -1722,14 +1737,18 @@ function renderFrota() {
 
   const emptyRow = txt => `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:16px">${txt}</td></tr>`;
 
-  document.getElementById('frota-empresas-tbody').innerHTML = empresas.length ? empresas.map(e => `
+  const empresasFilt = filtrarEmpresas(empresas, frotaBusca.empresas);
+  const infoEmp = document.getElementById('frota-empresas-filtro-info');
+  if (infoEmp) infoEmp.textContent = frotaBusca.empresas.trim() ? `· ${empresasFilt.length} de ${empresas.length}` : '';
+
+  document.getElementById('frota-empresas-tbody').innerHTML = empresasFilt.length ? empresasFilt.map(e => `
     <tr>
       <td style="font-weight:600">${escFrota(e.nome)}</td>
       <td style="color:var(--gray-500)">${escFrota(e.cnpj)}</td>
       <td>${escFrota(e.antt)}</td>
       <td>${e.ativa === false ? '<span class="badge gray">Inativa</span>' : '<span class="badge ok">Ativa</span>'}</td>
       <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openEmpresa(${e.id})">✏️ Editar</button></td>
-    </tr>`).join('') : emptyRow('Nenhuma empresa cadastrada.');
+    </tr>`).join('') : emptyRow(empresas.length ? 'Nenhuma empresa encontrada para esta busca.' : 'Nenhuma empresa cadastrada.');
 
   const veiculosFilt = filtrarFrota(veiculos, frotaBusca.veiculos);
   const carretasFilt = filtrarFrota(carretas, frotaBusca.carretas);
