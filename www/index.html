@@ -272,6 +272,28 @@
     }
     .motivo-item.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
 
+    /* LISTA DE PLACAS (cavalo/carreta) — botões sempre visíveis, sem depender do <select> */
+    .placa-lista {
+      display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;
+      border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 8px; background: var(--gray-50);
+    }
+    .placa-item {
+      border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 12px 14px; background: #fff;
+      cursor: pointer; -webkit-user-select: none; user-select: none;
+    }
+    .placa-item:active { background: var(--primary-light); border-color: var(--primary); }
+    .placa-item .pi-placa { font-size: 17px; font-weight: 800; letter-spacing: 1px; color: var(--gray-800); }
+    .placa-item .pi-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .placa-dica { font-size: 12px; color: var(--gray-500); margin: -2px 0 8px; }
+    .placa-selecionada {
+      align-items: center; justify-content: space-between; gap: 10px;
+      margin-top: 8px; font-size: 15px; font-weight: 800; border-radius: 10px; padding: 10px 12px;
+    }
+    .placa-trocar {
+      flex-shrink: 0; border: 1.5px solid currentColor; background: #fff; color: inherit;
+      border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
+
     /* FOTO */
     .photo-area {
       border: 2px dashed var(--gray-300); border-radius: var(--radius);
@@ -802,9 +824,12 @@ function onVeiculoSelect(sel) {
   state.placaVeiculo = v ? v.placa : '';
   const box = document.getElementById('placa-veiculo-selecionada');
   if (box) {
-    box.innerHTML = v ? `✓ Placa selecionada: <span style="letter-spacing:1px">${escHtml(v.placa)}</span>` : '';
-    box.style.display = v ? '' : 'none';
+    box.innerHTML = v ? `<span>✓ Cavalo: <span style="letter-spacing:1px">${escHtml(v.placa)}</span></span>
+      <button type="button" class="placa-trocar" onclick="trocarPlaca('veiculo')">Trocar</button>` : '';
+    box.style.display = v ? 'flex' : 'none';
   }
+  const wrap = document.getElementById('veiculo-busca-wrap');
+  if (wrap) wrap.style.display = v ? 'none' : '';
   const badge = document.getElementById('antt-veiculo-badge');
   if (badge) {
     badge.textContent = v
@@ -819,9 +844,12 @@ function onCarretaSelect(sel) {
   state.placaCarreta = c ? c.placa : '';
   const box = document.getElementById('placa-carreta-selecionada');
   if (box) {
-    box.innerHTML = c ? `✓ Carreta selecionada: <span style="letter-spacing:1px">${escHtml(c.placa)}</span>` : '';
-    box.style.display = c ? '' : 'none';
+    box.innerHTML = c ? `<span>✓ Carreta: <span style="letter-spacing:1px">${escHtml(c.placa)}</span></span>
+      <button type="button" class="placa-trocar" onclick="trocarPlaca('carreta')">Trocar</button>` : '';
+    box.style.display = c ? 'flex' : 'none';
   }
+  const wrap = document.getElementById('carreta-busca-wrap');
+  if (wrap) wrap.style.display = c ? 'none' : '';
   const badge = document.getElementById('antt-carreta-badge');
   if (badge) {
     badge.textContent = c
@@ -839,27 +867,36 @@ function veiculoOptionHtml(v) {
 /* Normaliza placa p/ comparação: ignora traço, espaço, ponto e caixa ("abc-1d23" → "ABC1D23") */
 function normPlaca(p) { return String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
 
-/* Busca genérica de placa (cavalo/carreta). Compara sem traço/espaço, seleciona
-   automaticamente quando a placa digitada bate exatamente (ou só sobra 1 resultado)
-   — no Android o <select> não abre sozinho, então sem isso parecia que nada mudava.
-   Se não encontrar uma placa completa, recarrega os cadastros do servidor uma vez
-   (o veículo pode ter sido cadastrado depois que o app abriu). */
+/* Busca genérica de placa (cavalo/carreta). Compara sem traço/espaço e mostra os
+   resultados como botões grandes sempre visíveis (no Android o <select> não abre
+   sozinho e o motorista achava que a placa não existia). Placa digitada inteira e
+   exata já fica selecionada. Se não encontrar uma placa completa, recarrega os
+   cadastros do servidor uma vez (o veículo pode ter sido cadastrado depois). */
 function filtrarPlacas(term, cfg) {
   const sel = document.getElementById(cfg.selId);
   if (!sel) return;
   const t = normPlaca(term);
-  const lista = dbData[cfg.chave];
+  const cadastros = dbData[cfg.chave];
   const prev = sel.value; // preserva a seleção atual, se ainda visível
   const matches = t
-    ? lista.filter(x => normPlaca(x.placa).includes(t)
+    ? cadastros.filter(x => normPlaca(x.placa).includes(t)
         || (x.modelo || '').toUpperCase().includes(String(term).trim().toUpperCase()))
-    : lista;
+    : cadastros;
   sel.innerHTML = `<option value="">${cfg.vazio}</option>` + matches.map(cfg.optHtml).join('');
 
   const exata = t && matches.find(x => normPlaca(x.placa) === t);
-  const alvo  = exata || (t && matches.length === 1 ? matches[0] : null);
-  if (alvo) sel.value = String(alvo.id);
+  if (exata) sel.value = String(exata.id);
   else if (prev && matches.some(x => String(x.id) === prev)) sel.value = prev;
+
+  const lista = document.getElementById(cfg.listaId);
+  if (lista) {
+    lista.style.display = matches.length ? '' : 'none';
+    lista.innerHTML = matches.map(x => `
+      <div class="placa-item" onclick="escolherPlaca('${cfg.kind}', '${x.id}')">
+        <div class="pi-placa">${escHtml(x.placa)}</div>
+        <div class="pi-sub">${escHtml(x.modelo || '')}${x.modelo ? ' · ' : ''}ANTT ${escHtml(x.antt || '?')} · ${escHtml(x.empresa_nome || '?')}</div>
+      </div>`).join('');
+  }
   if (sel.value !== prev) cfg.onSelect(sel);
 
   const nores = document.getElementById(cfg.noresId);
@@ -874,13 +911,34 @@ function filtrarPlacas(term, cfg) {
   }
 }
 
-const BUSCA_VEICULO = { selId: 'f-veiculo-sel', searchId: 'f-veiculo-search', noresId: 'veiculo-nores',
+const BUSCA_VEICULO = { kind: 'veiculo', selId: 'f-veiculo-sel', searchId: 'f-veiculo-search', noresId: 'veiculo-nores', listaId: 'f-veiculo-lista',
   chave: 'veiculos', vazio: 'Selecione o veículo...', optHtml: v => veiculoOptionHtml(v), onSelect: s => onVeiculoSelect(s) };
-const BUSCA_CARRETA = { selId: 'f-carreta-sel', searchId: 'f-carreta-search', noresId: 'carreta-nores',
+const BUSCA_CARRETA = { kind: 'carreta', selId: 'f-carreta-sel', searchId: 'f-carreta-search', noresId: 'carreta-nores', listaId: 'f-carreta-lista',
   chave: 'carretas', vazio: 'Sem carreta / selecione...', optHtml: c => carretaOptionHtml(c), onSelect: s => onCarretaSelect(s) };
 
 /* Filtra os veículos/cavalos do select pela placa digitada na caixa de busca (lupa) */
 function filterVeiculos(term) { filtrarPlacas(term, BUSCA_VEICULO); }
+
+/* Toque num item da lista de placas */
+function escolherPlaca(kind, id) {
+  const cfg = kind === 'veiculo' ? BUSCA_VEICULO : BUSCA_CARRETA;
+  const sel = document.getElementById(cfg.selId);
+  if (!sel) return;
+  sel.value = String(id);
+  cfg.onSelect(sel);
+}
+/* Botão "Trocar": desfaz a escolha e volta a mostrar a busca */
+function trocarPlaca(kind) {
+  const cfg = kind === 'veiculo' ? BUSCA_VEICULO : BUSCA_CARRETA;
+  const sel = document.getElementById(cfg.selId);
+  if (!sel) return;
+  sel.value = '';
+  cfg.onSelect(sel);
+  const inp = document.getElementById(cfg.searchId);
+  if (inp) inp.value = '';
+  filtrarPlacas('', cfg);
+  if (inp) inp.focus();
+}
 
 /* Monta o <option> de uma carreta (usado na montagem inicial e na busca) */
 function carretaOptionHtml(c) {
@@ -1280,22 +1338,26 @@ function renderStepIdent() {
   const veiculoField = veiculoOpts ? `
     <div class="form-group">
       <label class="form-label">Veículo (Cavalo) <span class="req">*</span></label>
-      <div style="position:relative;margin-bottom:8px">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.6">🔍</span>
-        <input class="form-input" id="f-veiculo-search" type="text" autocomplete="off"
-               placeholder="Buscar cavalo por placa..." oninput="filterVeiculos(this.value)"
-               style="padding-left:38px;text-transform:uppercase" />
+      <div id="veiculo-busca-wrap">
+        <div style="position:relative;margin-bottom:8px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.6">🔍</span>
+          <input class="form-input" id="f-veiculo-search" type="text" autocomplete="off"
+                 placeholder="Digite a placa do cavalo..." oninput="filterVeiculos(this.value)"
+                 style="padding-left:38px;text-transform:uppercase" />
+        </div>
+        <div class="placa-dica">Digite parte da placa e <strong>toque no cavalo</strong> na lista abaixo.</div>
+        <div id="f-veiculo-lista" class="placa-lista"></div>
+        <div id="veiculo-nores" style="display:none;margin-top:6px;font-size:13px;color:var(--danger)">
+          Nenhum cavalo encontrado com essa placa. Confira a placa ou peça ao gestor para cadastrar.
+        </div>
       </div>
-      <select class="form-input form-select" id="f-veiculo-sel" size="6" onchange="onVeiculoSelect(this)"
-              style="height:auto;padding:4px">
+      <!-- select oculto: guarda a escolha (lido por saveIdent/validateStep) -->
+      <select id="f-veiculo-sel" style="display:none" onchange="onVeiculoSelect(this)">
         <option value="">Selecione o veículo...</option>
         ${veiculoOpts}
       </select>
-      <div id="veiculo-nores" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-500)">
-        Nenhum cavalo encontrado para esta placa.
-      </div>
-      <div id="placa-veiculo-selecionada" style="display:none;margin-top:8px;font-size:15px;font-weight:800;
-           color:var(--primary);background:var(--primary-light);border:1.5px solid var(--primary);border-radius:10px;padding:10px 12px"></div>
+      <div id="placa-veiculo-selecionada" class="placa-selecionada" style="display:none;
+           color:var(--primary);background:var(--primary-light);border:1.5px solid var(--primary)"></div>
       <div id="antt-veiculo-badge" style="display:none;margin-top:6px;font-size:12px;font-weight:600;
            color:var(--primary);background:var(--primary-light);border-radius:8px;padding:6px 10px"></div>
     </div>` : `
@@ -1307,22 +1369,26 @@ function renderStepIdent() {
   const carretaField = carretaOpts ? `
     <div class="form-group">
       <label class="form-label">Carreta / Semirreboque</label>
-      <div style="position:relative;margin-bottom:8px">
-        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.6">🔍</span>
-        <input class="form-input" id="f-carreta-search" type="text" autocomplete="off"
-               placeholder="Buscar carreta por placa..." oninput="filterCarretas(this.value)"
-               style="padding-left:38px;text-transform:uppercase" />
+      <div id="carreta-busca-wrap">
+        <div style="position:relative;margin-bottom:8px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.6">🔍</span>
+          <input class="form-input" id="f-carreta-search" type="text" autocomplete="off"
+                 placeholder="Digite a placa da carreta..." oninput="filterCarretas(this.value)"
+                 style="padding-left:38px;text-transform:uppercase" />
+        </div>
+        <div class="placa-dica">Digite parte da placa e <strong>toque na carreta</strong> na lista abaixo.</div>
+        <div id="f-carreta-lista" class="placa-lista"></div>
+        <div id="carreta-nores" style="display:none;margin-top:6px;font-size:13px;color:var(--danger)">
+          Nenhuma carreta encontrada com essa placa. Confira a placa ou peça ao gestor para cadastrar.
+        </div>
       </div>
-      <select class="form-input form-select" id="f-carreta-sel" size="6" onchange="onCarretaSelect(this)"
-              style="height:auto;padding:4px">
+      <!-- select oculto: guarda a escolha (lido por saveIdent) -->
+      <select id="f-carreta-sel" style="display:none" onchange="onCarretaSelect(this)">
         <option value="">Sem carreta / selecione...</option>
         ${carretaOpts}
       </select>
-      <div id="carreta-nores" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-500)">
-        Nenhuma carreta encontrada para esta placa.
-      </div>
-      <div id="placa-carreta-selecionada" style="display:none;margin-top:8px;font-size:15px;font-weight:800;
-           color:var(--success);background:var(--success-light);border:1.5px solid var(--success);border-radius:10px;padding:10px 12px"></div>
+      <div id="placa-carreta-selecionada" class="placa-selecionada" style="display:none;
+           color:var(--success);background:var(--success-light);border:1.5px solid var(--success)"></div>
       <div id="antt-carreta-badge" style="display:none;margin-top:6px;font-size:12px;font-weight:600;
            color:var(--success);background:var(--success-light);border-radius:8px;padding:6px 10px"></div>
     </div>` : `
@@ -1369,7 +1435,9 @@ function restoreIdent() {
   setVal('f-cpf',           state.cpf);
   setVal('f-placa-veiculo', state.placaVeiculo);
   setVal('f-placa-carreta', state.placaCarreta);
-  // modo com banco — dispara badges
+  // modo com banco — monta as listas de placas e dispara badges
+  filterVeiculos('');
+  filterCarretas('');
   const vSel = document.getElementById('f-veiculo-sel');
   if (vSel && state._veiculoId) { vSel.value = state._veiculoId; onVeiculoSelect(vSel); }
   const cSel = document.getElementById('f-carreta-sel');
