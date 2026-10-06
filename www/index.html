@@ -836,21 +836,51 @@ function veiculoOptionHtml(v) {
   return `<option value="${v.id}" ${state._veiculoId == v.id ? 'selected' : ''}>${v.placa} — ${v.modelo || ''} (ANTT ${v.antt || '?'} · ${v.empresa_nome || '?'})</option>`;
 }
 
-/* Filtra os veículos/cavalos do select pela placa digitada na caixa de busca (lupa) */
-function filterVeiculos(term) {
-  const sel = document.getElementById('f-veiculo-sel');
+/* Normaliza placa p/ comparação: ignora traço, espaço, ponto e caixa ("abc-1d23" → "ABC1D23") */
+function normPlaca(p) { return String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+/* Busca genérica de placa (cavalo/carreta). Compara sem traço/espaço, seleciona
+   automaticamente quando a placa digitada bate exatamente (ou só sobra 1 resultado)
+   — no Android o <select> não abre sozinho, então sem isso parecia que nada mudava.
+   Se não encontrar uma placa completa, recarrega os cadastros do servidor uma vez
+   (o veículo pode ter sido cadastrado depois que o app abriu). */
+function filtrarPlacas(term, cfg) {
+  const sel = document.getElementById(cfg.selId);
   if (!sel) return;
-  const t = (term || '').trim().toUpperCase();
+  const t = normPlaca(term);
+  const lista = dbData[cfg.chave];
   const prev = sel.value; // preserva a seleção atual, se ainda visível
   const matches = t
-    ? dbData.veiculos.filter(v => (v.placa || '').toUpperCase().includes(t)
-        || (v.modelo || '').toUpperCase().includes(t))
-    : dbData.veiculos;
-  sel.innerHTML = '<option value="">Selecione o veículo...</option>' + matches.map(veiculoOptionHtml).join('');
-  if (prev && matches.some(v => String(v.id) === prev)) sel.value = prev;
-  const nores = document.getElementById('veiculo-nores');
+    ? lista.filter(x => normPlaca(x.placa).includes(t)
+        || (x.modelo || '').toUpperCase().includes(String(term).trim().toUpperCase()))
+    : lista;
+  sel.innerHTML = `<option value="">${cfg.vazio}</option>` + matches.map(cfg.optHtml).join('');
+
+  const exata = t && matches.find(x => normPlaca(x.placa) === t);
+  const alvo  = exata || (t && matches.length === 1 ? matches[0] : null);
+  if (alvo) sel.value = String(alvo.id);
+  else if (prev && matches.some(x => String(x.id) === prev)) sel.value = prev;
+  if (sel.value !== prev) cfg.onSelect(sel);
+
+  const nores = document.getElementById(cfg.noresId);
   if (nores) nores.style.display = (t && matches.length === 0) ? '' : 'none';
+
+  if (t.length >= 7 && matches.length === 0 && !cfg._recarregando) {
+    cfg._recarregando = true;
+    loadDbData().then(() => {
+      const inp = document.getElementById(cfg.searchId);
+      if (inp && normPlaca(inp.value) === t) filtrarPlacas(inp.value, cfg);
+    }).finally(() => { setTimeout(() => { cfg._recarregando = false; }, 5000); });
+  }
 }
+
+const BUSCA_VEICULO = { selId: 'f-veiculo-sel', searchId: 'f-veiculo-search', noresId: 'veiculo-nores',
+  chave: 'veiculos', vazio: 'Selecione o veículo...', optHtml: v => veiculoOptionHtml(v), onSelect: s => onVeiculoSelect(s) };
+const BUSCA_CARRETA = { selId: 'f-carreta-sel', searchId: 'f-carreta-search', noresId: 'carreta-nores',
+  chave: 'carretas', vazio: 'Sem carreta / selecione...', optHtml: c => carretaOptionHtml(c), onSelect: s => onCarretaSelect(s) };
+
+/* Filtra os veículos/cavalos do select pela placa digitada na caixa de busca (lupa) */
+function filterVeiculos(term) { filtrarPlacas(term, BUSCA_VEICULO); }
 
 /* Monta o <option> de uma carreta (usado na montagem inicial e na busca) */
 function carretaOptionHtml(c) {
@@ -858,20 +888,7 @@ function carretaOptionHtml(c) {
 }
 
 /* Filtra as carretas do select pela placa digitada na caixa de busca (lupa) */
-function filterCarretas(term) {
-  const sel = document.getElementById('f-carreta-sel');
-  if (!sel) return;
-  const t = (term || '').trim().toUpperCase();
-  const prev = sel.value; // preserva a seleção atual, se ainda visível
-  const matches = t
-    ? dbData.carretas.filter(c => (c.placa || '').toUpperCase().includes(t)
-        || (c.modelo || '').toUpperCase().includes(t))
-    : dbData.carretas;
-  sel.innerHTML = '<option value="">Sem carreta / selecione...</option>' + matches.map(carretaOptionHtml).join('');
-  if (prev && matches.some(c => String(c.id) === prev)) sel.value = prev;
-  const nores = document.getElementById('carreta-nores');
-  if (nores) nores.style.display = (t && matches.length === 0) ? '' : 'none';
-}
+function filterCarretas(term) { filtrarPlacas(term, BUSCA_CARRETA); }
 
 
 /* ═══════════════════════════════════════
@@ -888,9 +905,9 @@ function goTo(screenId) {
 function checklistLabel(type) {
   return type === 'rmc045' ? 'Check List 21 Pontos' : 'Check List 11 Pontos';
 }
-/* "container(s)" para RMC-046, "carga(s)" para RMC-045 */
+/* "container(s)" para RMC-046 e para o bi-trem do RMC-045 (2 containers); "carga(s)" no RMC-045 simples */
 function unidadeLabel(type, plural) {
-  if (type === 'rmc046') return plural ? 'containers' : 'container';
+  if (type === 'rmc046' || (state.numTracks || 1) > 1) return plural ? 'containers' : 'container';
   return plural ? 'cargas' : 'carga';
 }
 
@@ -1183,8 +1200,8 @@ function renderStep() {
 /* ─── STEP: Quantidade de containers/cargas (bi-trem) ─── */
 function renderStepQtd() {
   const isC  = state.formType === 'rmc046';
-  const uni  = unidadeLabel(state.formType, true);          // containers / cargas
-  const uniS = unidadeLabel(state.formType, false);         // container / carga
+  const uni  = isC ? 'containers' : 'cargas';
+  const uniS = isC ? 'container' : 'carga';
   const quantos = isC ? 'Quantos' : 'Quantas';              // concordância de gênero
   const os      = isC ? 'os' : 'as';
   const n = state.numTracks;
@@ -1403,7 +1420,9 @@ function saveIdent() {
 function renderStepCarga(t) {
   const carga = state.cargas[t];
   const type = carga.formType || state.formType;
-  const isContainer = type === 'rmc046';
+  // O formulário oficial RMC-045 também tem Nº Container / Tara / Max. Gross.
+  // Obrigatório no RMC-046 e no bi-trem (2 containers); opcional no RMC-045 simples.
+  const containerObrig = type === 'rmc046' || state.numTracks > 1;
   const stopIdx = t; // na partida, o stop de partida do track t é o índice t
   const multi = state.numTracks > 1;
   const uniS = unidadeLabel(type, false).replace(/^\w/, c => c.toUpperCase()); // Container / Carga
@@ -1427,9 +1446,8 @@ function renderStepCarga(t) {
       <label class="form-label">Destino da Carga <span class="req">*</span></label>
       <input class="form-input" id="f-destino" type="text" placeholder="Cidade/Terminal de destino" />
     </div>
-    ${isContainer ? `
     <div class="form-group">
-      <label class="form-label">N° do Container <span class="req">*</span></label>
+      <label class="form-label">N° do Container ${containerObrig ? '<span class="req">*</span>' : '(se houver)'}</label>
       <input class="form-input" id="f-container" type="text" placeholder="Ex: MSCU1234567" style="text-transform:uppercase" />
     </div>
     <div class="form-row">
@@ -1442,7 +1460,6 @@ function renderStepCarga(t) {
         <input class="form-input" id="f-maxgross" type="number" placeholder="0" inputmode="numeric" />
       </div>
     </div>
-    ` : ''}
     <div class="divider"></div>
     <div class="section-title">Lacres — número e foto</div>
     <div class="info-box" style="margin-bottom:12px">
@@ -1488,11 +1505,9 @@ function restoreCarga(t) {
   if (!state.sharedProcess) setVal('f-processo-carga', carga.processo);
   setVal('f-local-coleta', carga.localColeta);
   setVal('f-destino', carga.destino);
-  if ((carga.formType || state.formType) === 'rmc046') {
-    setVal('f-container', carga.numContainer);
-    setVal('f-tara', carga.tara);
-    setVal('f-maxgross', carga.maxGross);
-  }
+  setVal('f-container', carga.numContainer);
+  setVal('f-tara', carga.tara);
+  setVal('f-maxgross', carga.maxGross);
   const lac = carga.lacres || {};
   setVal('f-lacre-armador', lac.armador);
   setVal('f-lacre-mc', lac.mc);
@@ -1505,11 +1520,9 @@ function saveCarga(t) {
   if (!state.sharedProcess) carga.processo = getVal('f-processo-carga');
   carga.localColeta = getVal('f-local-coleta');
   carga.destino = getVal('f-destino');
-  if ((carga.formType || state.formType) === 'rmc046') {
-    carga.numContainer = getVal('f-container').toUpperCase();
-    carga.tara = getVal('f-tara');
-    carga.maxGross = getVal('f-maxgross');
-  }
+  carga.numContainer = getVal('f-container').toUpperCase();
+  carga.tara = getVal('f-tara');
+  carga.maxGross = getVal('f-maxgross');
   carga.lacres = carga.lacres || {};
   carga.lacres.armador    = getVal('f-lacre-armador');
   carga.lacres.mc         = getVal('f-lacre-mc');
@@ -1829,7 +1842,7 @@ function previousStopSameType(stopIdx) {
 function trackLabelOfStop(stop) {
   const t = stop.trackId || 0;
   const carga = (state.cargas || [])[t] || {};
-  const isC = (carga.formType || state.formType) === 'rmc046';
+  const isC = (carga.formType || state.formType) === 'rmc046' || (state.cargas || []).length > 1;
   const base = isC ? `Container ${t + 1}` : `Carga ${t + 1}`;
   return carga.numContainer ? `${base} — ${carga.numContainer}` : base;
 }
@@ -1967,7 +1980,7 @@ function validateStep() {
     if (!getVal('f-local-coleta') || !getVal('f-destino')) {
       flashError('Informe o local de coleta e destino'); return false;
     }
-    if (type === 'rmc046' && !getVal('f-container')) {
+    if ((type === 'rmc046' || state.numTracks > 1) && !getVal('f-container')) {
       flashError('Informe o número do container'); return false;
     }
     // Fotos dos lacres da partida deste relatório são tiradas aqui (stop índice t)
@@ -2085,7 +2098,7 @@ async function submitForm() {
     const fotos = collectFotos(trackStops);
     const isC = type === 'rmc046';
     resumo.push({
-      label: (numT > 1 ? `${isC ? 'Container' : 'Carga'} ${t + 1}` : (isC ? 'Container' : 'Relatório')),
+      label: (numT > 1 ? `Container ${t + 1}` : (isC ? 'Container' : 'Relatório')),
       num: carga.numContainer,
       paradas: trackStops.filter(s => s.tipo !== 'Partida').length,
       total: trackStops.length,
@@ -2281,7 +2294,7 @@ function renderHome() {
       const stopsTrack = allStops.filter(s => (s.trackId || 0) === t);
       const paradas = stopsTrack.filter(s => s.tipo !== 'Partida').length;
       const partidaOk = stopsTrack.some(s => s.tipo === 'Partida');
-      const tituloUni = cargas.length > 1 ? `${isC ? 'Container' : 'Carga'} ${t + 1}` : (isC ? 'Container FCL' : 'Rodoviário');
+      const tituloUni = cargas.length > 1 ? `Container ${t + 1}` : (isC ? 'Container FCL' : 'Rodoviário');
       const numHtml = carga.numContainer ? ` · <strong>${escHtml(carga.numContainer)}</strong>` : '';
       const cor = isC ? '#7c3aed' : 'var(--primary)';
       return `
@@ -2294,7 +2307,7 @@ function renderHome() {
             ${partidaOk ? 'Partida ✓ · ' : ''}${paradas} parada(s) registrada(s)
           </div>
           <button onclick="startNewStop(${t})" class="btn-primary" style="width:100%;font-size:13px;padding:10px 8px;${isC ? 'background:#7c3aed' : ''}">
-            + Adicionar parada${cargas.length > 1 ? ' (' + (isC ? 'Container' : 'Carga') + ' ' + (t + 1) + ')' : ''}
+            + Adicionar parada${cargas.length > 1 ? ' (Container ' + (t + 1) + ')' : ''}
           </button>
         </div>`;
     }).join('');

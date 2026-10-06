@@ -2105,11 +2105,11 @@ function buildEditCampos(v) {
         ${editField('edit-local-coleta', 'Local de Coleta', g('local_coleta', 'localColeta'))}
         ${editField('edit-destino', 'Destino', v.destino)}
       </div>
-      ${isContainer ? `<div class="form-row">
+      <div class="form-row">
         ${editField('edit-container', 'N° do Container', v.num_container)}
         ${editField('edit-tara', 'Tara (kg)', v.tara, { type:'number' })}
         ${editField('edit-maxgross', 'Max. Gross (kg)', v.max_gross, { type:'number' })}
-      </div>` : ''}
+      </div>
       <div class="form-row">
         ${isContainer ? '' : editField('edit-lacre-armador', 'Lacre Armador', v.lacre_armador)}
         ${editField('edit-lacre-mc', 'Lacre MC Transportes', v.lacre_mc)}
@@ -2317,7 +2317,7 @@ async function salvarEdicao() {
     obs:            gv('edit-obs'),
     stops:          readEditStops(),
   };
-  // Campos exclusivos do formulário de container (RMC-046)
+  // Container / Tara / Max. Gross (presentes nos dois formulários)
   if (document.getElementById('edit-container')) {
     payload.num_container = gv('edit-container');
     payload.tara         = gv('edit-tara');

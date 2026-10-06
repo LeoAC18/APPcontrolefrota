@@ -185,13 +185,12 @@ async function gerarPdf(vistoria) {
       ['Local da Coleta da Carga',  vistoria.localColeta   || '-'],
       ['Destino da Carga',          vistoria.destino       || '-'],
     ];
-    if (vistoria.formType === 'rmc046') {
-      identRows.push(
-        ['N do Container', vistoria.numContainer || '-'],
-        ['Tara (kg)',      vistoria.tara     ? String(vistoria.tara)     : '-'],
-        ['Max. Gross (kg)', vistoria.maxGross ? String(vistoria.maxGross) : '-'],
-      );
-    }
+    // Os dois formulários oficiais (RMC-045 e RMC-046) têm Nº Container / Tara / Max. Gross
+    identRows.push(
+      ['N do Container', vistoria.numContainer || '-'],
+      ['Tara (kg)',      vistoria.tara     ? String(vistoria.tara)     : '-'],
+      ['Max. Gross (kg)', vistoria.maxGross ? String(vistoria.maxGross) : '-'],
+    );
     if (vistoria.formType === 'rmc046') {
       // Container em FCL — apenas o lacre da MC Transportes
       identRows.push(['Lacre - MC Transportes', vistoria.lacreMC || 'Nao informado']);
