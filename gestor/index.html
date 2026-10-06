@@ -845,9 +845,15 @@
 
       <!-- Cavalos -->
       <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
-          <div><span style="font-weight:700">Cavalos (veículos)</span></div>
-          <button class="btn btn-primary btn-sm" onclick="openVeiculo()">+ Adicionar Cavalo</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Cavalos (veículos)</span> <span id="frota-veiculos-filtro-info" style="color:var(--gray-400);font-size:12px"></span></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="frota-veiculos-busca" placeholder="Buscar cavalo por placa, modelo ou ANTT..." oninput="filterFrota('veiculos', this.value)" />
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openVeiculo()">+ Adicionar Cavalo</button>
+          </div>
         </div>
         <table>
           <thead><tr><th>Placa</th><th>Modelo</th><th>ANTT / empresa</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
@@ -857,9 +863,15 @@
 
       <!-- Carretas -->
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
-          <div><span style="font-weight:700">Carretas</span></div>
-          <button class="btn btn-primary btn-sm" onclick="openCarreta()">+ Adicionar Carreta</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 16px;border-bottom:1px solid var(--gray-200)">
+          <div><span style="font-weight:700">Carretas</span> <span id="frota-carretas-filtro-info" style="color:var(--gray-400);font-size:12px"></span></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="frota-carretas-busca" placeholder="Buscar carreta por placa, modelo ou ANTT..." oninput="filterFrota('carretas', this.value)" />
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openCarreta()">+ Adicionar Carreta</button>
+          </div>
         </div>
         <table>
           <thead><tr><th>Placa</th><th>Modelo</th><th>ANTT / empresa</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
@@ -1686,6 +1698,23 @@ function escFrota(s) {
 function fVal(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
 function fErr(elId, msg) { const el = document.getElementById(elId); el.textContent = msg; el.style.display = 'block'; }
 
+/* Busca da Gestão de Frota (lupa de cavalos e carretas) */
+const frotaBusca = { veiculos: '', carretas: '' };
+// Placa comparada sem traço/espaço ("abc1d23" acha "ABC-1D23")
+function normPlacaFrota(p) { return String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+function filtrarFrota(lista, termo) {
+  const t = String(termo || '').trim().toUpperCase();
+  if (!t) return lista;
+  const tPlaca = normPlacaFrota(t);
+  return lista.filter(x =>
+    (tPlaca && normPlacaFrota(x.placa).includes(tPlaca)) ||
+    [x.modelo, x.antt, x.empresa_nome].some(f => String(f || '').toUpperCase().includes(t)));
+}
+function filterFrota(kind, termo) {
+  frotaBusca[kind] = termo;
+  renderFrota();
+}
+
 function renderFrota() {
   document.getElementById('frota-count-empresas').textContent = empresas.length;
   document.getElementById('frota-count-veiculos').textContent = veiculos.length;
@@ -1702,23 +1731,32 @@ function renderFrota() {
       <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openEmpresa(${e.id})">✏️ Editar</button></td>
     </tr>`).join('') : emptyRow('Nenhuma empresa cadastrada.');
 
-  document.getElementById('frota-veiculos-tbody').innerHTML = veiculos.length ? veiculos.map(v => `
+  const veiculosFilt = filtrarFrota(veiculos, frotaBusca.veiculos);
+  const carretasFilt = filtrarFrota(carretas, frotaBusca.carretas);
+  const infoFiltro = (kind, filt, total) => {
+    const el = document.getElementById(`frota-${kind}-filtro-info`);
+    if (el) el.textContent = frotaBusca[kind].trim() ? `— ${filt.length} de ${total}` : '';
+  };
+  infoFiltro('veiculos', veiculosFilt, veiculos.length);
+  infoFiltro('carretas', carretasFilt, carretas.length);
+
+  document.getElementById('frota-veiculos-tbody').innerHTML = veiculosFilt.length ? veiculosFilt.map(v => `
     <tr>
       <td style="font-weight:600">${escFrota(v.placa)}</td>
       <td style="color:var(--gray-500)">${escFrota(v.modelo || '—')}</td>
       <td>${escFrota((v.antt || '—') + ' · ' + (v.empresa_nome || '—'))}</td>
       <td>${v.ativo === false ? '<span class="badge gray">Inativo</span>' : '<span class="badge ok">Ativo</span>'}</td>
       <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openVeiculo(${v.id})">✏️ Editar</button></td>
-    </tr>`).join('') : emptyRow('Nenhum cavalo cadastrado.');
+    </tr>`).join('') : emptyRow(veiculos.length ? 'Nenhum cavalo encontrado para esta busca.' : 'Nenhum cavalo cadastrado.');
 
-  document.getElementById('frota-carretas-tbody').innerHTML = carretas.length ? carretas.map(c => `
+  document.getElementById('frota-carretas-tbody').innerHTML = carretasFilt.length ? carretasFilt.map(c => `
     <tr>
       <td style="font-weight:600">${escFrota(c.placa)}</td>
       <td style="color:var(--gray-500)">${escFrota(c.modelo || '—')}</td>
       <td>${escFrota((c.antt || '—') + ' · ' + (c.empresa_nome || '—'))}</td>
       <td>${c.ativo === false ? '<span class="badge gray">Inativo</span>' : '<span class="badge ok">Ativo</span>'}</td>
       <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openCarreta(${c.id})">✏️ Editar</button></td>
-    </tr>`).join('') : emptyRow('Nenhuma carreta cadastrada.');
+    </tr>`).join('') : emptyRow(carretas.length ? 'Nenhuma carreta encontrada para esta busca.' : 'Nenhuma carreta cadastrada.');
 }
 
 function fillEmpresaSelect(selId, selectedId) {
